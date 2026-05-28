@@ -1,8 +1,9 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
+import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 COINS = [
@@ -12,12 +13,11 @@ COINS = [
 
 @app.route("/")
 def index():
-    return jsonify({"status": "CryptoScan API running"})
+    return send_from_directory('static', 'index.html')
 
 @app.route("/market")
 def market():
     result = {}
-
     try:
         ids = ",".join(COINS)
         r = requests.get(
@@ -34,7 +34,7 @@ def market():
     try:
         r = requests.get("https://api.alternative.me/fng/?limit=1", timeout=5)
         result["fear_greed"] = r.json()["data"][0]
-    except Exception as e:
+    except:
         result["fear_greed"] = None
 
     try:
@@ -46,7 +46,7 @@ def market():
             "total_market_cap_usd": d["total_market_cap"].get("usd", 0),
             "total_volume_usd": d["total_volume"].get("usd", 0),
         }
-    except Exception as e:
+    except:
         result["global"] = None
 
     return jsonify(result)
