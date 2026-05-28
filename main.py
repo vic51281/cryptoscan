@@ -1,9 +1,9 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_file
 from flask_cors import CORS
 import requests
 import os
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 COINS = [
@@ -13,7 +13,7 @@ COINS = [
 
 @app.route("/")
 def index():
-    return send_from_directory('static', 'index.html')
+    return send_file("index.html")
 
 @app.route("/market")
 def market():
