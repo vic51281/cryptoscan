@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CryptoScan AI</title>
+<style>
+:root {
+  --bg:#080c14; --surface:#0d1420; --surface2:#111926;
+  --border:#1e2d42; --accent:#00e5ff;
+  --green:#00ff9d; --red:#ff3b5c; --yellow:#ffd600;
+  --text:#e8f0fe; --muted:#5a7a9a;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+header{border-bottom:1px solid var(--border);padding:13px 20px;background:rgba(8,12,20,0.97);position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.logo{font-family:monospace;font-size:17px;color:var(--accent);letter-spacing:1px;}
+#statusWrap{display:flex;align-items:center;gap:7px;font-family:monospace;font-size:11px;color:var(--muted);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;}
+.dot.live{background:var(--green);box-shadow:0 0 6px var(--green);}
+.dot.scan{background:var(--yellow);box-shadow:0 0 6px var(--yellow);}
+.btn{background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:monospace;font-size:11px;padding:7px 16px;cursor:pointer;transition:all .2s;}
+.btn:hover{background:rgba(0,229,255,0.1);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-auto{border-color:var(--border);color:var(--muted);}
+.btn-auto.on{border-color:var(--green);color:var(--green);background:rgba(0,255,157,0.07);}
+
+main{max-width:1300px;margin:0 auto;padding:18px 16px 40px;position:relative;z-index:1;}
+
+.sec-title{display:flex;align-items:center;gap:10px;margin:22px 0 12px;font-family:monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* FG bar */
+.fg-bar{background:var(--surface);border:1px solid var(--border);padding:14px 20px;margin-bottom:14px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.fg-track{flex:1;height:8px;background:linear-gradient(90deg,#ff3b5c,#ff6b35,#ffd600,#00ff9d,#00e5ff);border-radius:4px;position:relative;min-width:120px;}
+.fg-needle{position:absolute;top:-5px;width:18px;height:18px;background:white;border-radius:50%;transform:translateX(-50%);box-shadow:0 0 8px rgba(255,255,255,.7);transition:left .8s ease;left:50%;}
+.fg-num{font-family:monospace;font-size:26px;font-weight:700;}
+.fg-lbl{font-size:11px;color:var(--muted);}
+
+/* Global stats */
+.stats-row{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+.stat-box{background:var(--surface);border:1px solid var(--border);padding:10px 16px;flex:1 1 100px;}
+.stat-k{font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.stat-v{font-family:monospace;font-size:17px;font-weight:700;color:var(--accent);margin-top:4px;}
+
+/* TV chart */
+.tv-wrap{background:var(--surface);border:1px solid var(--border);margin-bottom:14px;}
+.tv-tabs{display:flex;border-bottom:1px solid var(--border);overflow-x:auto;}
+.tv-tabs::-webkit-scrollbar{display:none;}
+.tv-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);font-family:monospace;font-size:11px;padding:10px 14px;cursor:pointer;white-space:nowrap;}
+.tv-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+#tvFrame{width:100%;height:450px;border:none;display:block;}
+
+/* Mini charts */
+.mini-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:16px;}
+.mini-card{background:var(--surface);border:1px solid var(--border);cursor:pointer;overflow:hidden;transition:border-color .2s;}
+.mini-card:hover,.mini-card.active{border-color:var(--accent);}
+.mini-label{padding:6px 10px;font-family:monospace;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);}
+.mini-card iframe{width:100%;height:100px;border:none;display:block;}
+
+/* Coin cards */
+.coin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:9px;margin-bottom:16px;}
+.coin-card{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--border);padding:13px;cursor:pointer;transition:border-color .2s;}
+.coin-card:hover{border-color:var(--accent);}
+.coin-head{display:flex;justify-content:space-between;margin-bottom:10px;}
+.coin-sym{font-family:monospace;font-size:15px;font-weight:700;}
+.coin-name-s{font-size:11px;color:var(--muted);}
+.coin-price{font-family:monospace;font-size:14px;font-weight:700;text-align:right;}
+.coin-pct{font-family:monospace;font-size:12px;text-align:right;}
+.pos{color:var(--green);} .neg{color:var(--red);}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.metric{background:var(--surface2);padding:5px 8px;}
+.metric-k{font-family:monospace;font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.metric-v{font-family:monospace;font-size:12px;font-weight:700;margin-top:2px;}
+.sig-badge{display:inline-flex;align-items:center;gap:4px;margin-top:9px;padding:3px 10px;font-size:10px;font-family:monospace;border:1px solid;cursor:default;}
+
+/* Liquidity */
+.liq-wrap{background:var(--surface);border:1px solid var(--border);padding:12px 16px;margin-bottom:16px;}
+.liq-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.liq-chip{padding:5px 12px;font-family:monospace;font-size:11px;border:1px solid;}
+
+/* AI panel */
+.ai-panel{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);margin-bottom:16px;}
+.ai-head{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);background:rgba(0,229,255,.04);}
+.ai-badge{width:26px;height:26px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--bg);font-family:monospace;font-size:11px;font-weight:700;flex-shrink:0;}
+.ai-title{font-family:monospace;font-size:11px;color:var(--accent);letter-spacing:2px;}
+.ai-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.ai-presets{display:flex;flex-wrap:wrap;gap:7px;padding:12px 14px;border-bottom:1px solid var(--border);}
+.ai-preset{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;padding:5px 12px;cursor:pointer;transition:border-color .2s;}
+.ai-preset:hover{border-color:var(--accent);}
+.ai-preset:disabled{opacity:0.4;cursor:not-allowed;}
+.ai-input-row{display:flex;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);}
+.ai-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:monospace;font-size:12px;padding:8px 12px;outline:none;}
+.ai-body{padding:18px;font-size:14px;line-height:1.9;white-space:pre-wrap;min-height:80px;}
+.dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);animation:bounce 1.2s infinite ease-in-out;}
+.dots span:nth-child(2){animation-delay:.2s;}
+.dots span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+
+.footer{text-align:center;padding:16px 0;border-top:1px solid var(--border);margin-top:16px;font-family:monospace;font-size:10px;color:var(--muted);}
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
+
+/* API Key modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.modal.show{display:flex;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);padding:24px;max-width:420px;width:100%;}
+.modal-title{font-family:monospace;font-size:14px;color:var(--accent);margin-bottom:12px;}
+.modal-input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:monospace;font-size:13px;padding:9px 12px;outline:none;margin-bottom:10px;}
+.modal-btns{display:flex;gap:8px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⬡ CRYPTOSCAN/AI</div>
+  <div id="statusWrap"><span class="dot" id="dot"></span><span id="statusTxt">就緒 · 點擊掃描</span></div>
+  <div style="display:flex;gap:6px;">
+    <button class="btn" id="scanBtn" onclick="scanMarket()">▶ 掃描</button>
+    <button class="btn btn-auto" id="autoBtn" onclick="toggleAuto()">⏱ 自動</button>
+    <button class="btn" style="border-color:var(--border);color:var(--muted);font-size:10px;" onclick="openKeyModal()">🔑 API Key</button>
+  </div>
+</header>
+
+<main>
+  <!-- Fear & Greed -->
+  <div class="fg-bar">
+    <div style="font-family:monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;min-width:80px;">恐懼貪婪</div>
+    <div class="fg-track"><div class="fg-needle" id="fgNeedle"></div></div>
+    <div><div class="fg-num" id="fgNum" style="color:var(--muted)">--</div><div class="fg-lbl" id="fgLbl">尚未載入</div></div>
+  </div>
+
+  <!-- Global stats -->
+  <div class="stats-row" id="statsRow" style="display:none;">
+    <div class="stat-box"><div class="stat-k">BTC 主導率</div><div class="stat-v" id="sBtcDom">--</div></div>
+    <div class="stat-box"><div class="stat-k">總市值</div><div class="stat-v" id="sTotalMcap">--</div></div>
+    <div class="stat-box"><div class="stat-k">24H 成交量</div><div class="stat-v" id="sTotalVol">--</div></div>
+  </div>
+
+  <!-- TradingView chart -->
+  <div class="sec-title">TradingView 即時 K 線圖</div>
+  <div class="tv-wrap">
+    <div class="tv-tabs" id="tvTabs"></div>
+    <iframe id="tvFrame" src="" title="chart"></iframe>
+  </div>
+
+  <!-- Mini charts -->
+  <div class="sec-title">主要幣種走勢</div>
+  <div class="mini-grid" id="miniGrid"></div>
+
+  <!-- Coin cards -->
+  <div class="sec-title">即時幣種掃描 <span id="scanTime" style="font-size:10px;color:var(--muted);font-weight:normal;letter-spacing:0;"></span></div>
+  <div class="coin-grid" id="coinGrid"><div class="empty">點擊「掃描」載入即時數據</div></div>
+
+  <!-- Liquidity -->
+  <div id="liqSection" style="display:none;">
+    <div class="sec-title">流動性概覽</div>
+    <div class="liq-wrap">
+      <div style="font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:2px;">VOL / MCAP 流動性強度</div>
+      <div class="liq-chips" id="liqChips"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">綠 >15% · 黃 8–15% · 紅 <8%</div>
+    </div>
+  </div>
+
+  <!-- AI -->
+  <div class="sec-title">AI 市場分析</div>
+  <div class="ai-panel">
+    <div class="ai-head">
+      <div class="ai-badge">AI</div>
+      <div><div class="ai-title">市場分析助手</div><div class="ai-sub" id="aiSub">由 Claude AI 驅動</div></div>
+      <div class="dots" id="aiDots" style="margin-left:auto;display:none;gap:3px;"><span></span><span></span><span></span></div>
+    </div>
+    <div class="ai-presets" id="aiPresets"></div>
+    <div class="ai-input-row">
+      <input class="ai-input" id="aiInput" placeholder="輸入問題，Enter 送出..." onkeydown="if(event.key==='Enter')sendQ()">
+      <button class="btn" onclick="sendQ()">送出</button>
+    </div>
+    <div class="ai-body" id="aiBody" style="color:var(--muted);font-style:italic;">點擊上方按鈕或輸入問題開始分析...</div>
+  </div>
+
+  <div class="footer">
+    TradingView 即時圖表 · 數據來源 CoinGecko · AI 分析由 Claude 驅動<br>
+    <span style="color:#ff6b3555;">⚠️ 僅供參考，不構成投資建議</span>
+  </div>
+</main>
+
+<!-- API Key Modal -->
+<div class="modal" id="keyModal">
+  <div class="modal-box">
+    <div class="modal-title">🔑 設定 Anthropic API Key（選填）</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.8;">
+      輸入後可啟用 AI 分析功能。無 Key 可直接關閉，TradingView 圖表與市場數據仍可正常使用。
+    </div>
+    <input type="password" class="modal-input" id="keyInput" placeholder="sk-ant-api03-...">
+    <div class="modal-btns">
+      <button class="btn" style="flex:1;" onclick="saveKey()">儲存</button>
+      <button class="btn" style="border-color:var(--border);color:var(--muted);" onclick="closeKeyModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COINS = [
+  {id:"bitcoin",      sym:"BTC",  name:"Bitcoin",   tv:"BINANCE:BTCUSDT"},
+  {id:"ethereum",     sym:"ETH",  name:"Ethereum",  tv:"BINANCE:ETHUSDT"},
+  {id:"solana",       sym:"SOL",  name:"Solana",    tv:"BINANCE:SOLUSDT"},
+  {id:"binancecoin",  sym:"BNB",  name:"BNB",       tv:"BINANCE:BNBUSDT"},
+  {id:"ripple",       sym:"XRP",  name:"Ripple",    tv:"BINANCE:XRPUSDT"},
+  {id:"dogecoin",     sym:"DOGE", name:"Dogecoin",  tv:"BINANCE:DOGEUSDT"},
+  {id:"cardano",      sym:"ADA",  name:"Cardano",   tv:"BINANCE:ADAUSDT"},
+  {id:"avalanche-2",  sym:"AVAX", name:"Avalanche", tv:"BINANCE:AVAXUSDT"},
+];
+const PRESETS = [
+  "做全面市場分析並給出操作建議",
+  "哪個幣短線做多機會最好？",
+  "BTC 和 ETH 現在誰更強？",
+  "現在該持倉還是減倉？",
+  "哪些幣需要迴避？",
+  "根據現在數據最佳操作策略？",
+];
+
+let apiKey = localStorage.getItem("anthropic_key") || "";
+let autoTimer = null;
+let activeChart = COINS[0];
+let lastCoins = [];
+let lastFg = null;
+let lastGlobal = null;
+
+// ── Format ────────────────────────────────────────────────────────
+function fmt(n){if(n==null)return"--";const a=Math.abs(n);if(a>=1e12)return(n/1e12).toFixed(2)+"T";if(a>=1e9)return(n/1e9).toFixed(2)+"B";if(a>=1e6)return(n/1e6).toFixed(2)+"M";if(a>=1e3)return(n/1e3).toFixed(1)+"K";return n.toFixed(2);}
+function fmtPrice(p){if(p==null)return"--";if(p>=1000)return"$"+p.toLocaleString("en",{maximumFractionDigits:2});if(p>=1)return"$"+p.toFixed(3);return"$"+p.toFixed(6);}
+function fmtPct(p){if(p==null)return"--";return(p>=0?"+":"")+p.toFixed(2)+"%";}
+function signal(c){const p24=c.price_change_percentage_24h||0,p7d=c.price_change_percentage_7d_in_currency||0;let s=0;if(p24>3)s+=2;else if(p24>0)s+=1;else if(p24<-5)s-=2;else if(p24<0)s-=1;if(p7d>10)s+=2;else if(p7d>0)s+=1;else if(p7d<-15)s-=2;else if(p7d<0)s-=1;if(s>=3)return{l:"做多",i:"▲",c:"#00ff9d"};if(s<=-2)return{l:"做空",i:"▼",c:"#ff3b5c"};return{l:"觀望",i:"◆",c:"#ffd600"};}
+
+// ── TradingView ───────────────────────────────────────────────────
+function tvUrl(tv){return`https://s.tradingview.com/widgetembed/?symbol=${tv}&interval=60&timezone=Asia%2FTaipei&theme=dark&style=1&locale=zh_TW&studies=RSI%40tv-basicstudies%2CMACD%40tv-basicstudies&backgroundColor=rgba(8%2C12%2C20%2C1)`;}
+function tvMini(tv){return`https://s.tradingview.com/mini-chart-widget.html?symbol=${tv}&interval=60&locale=zh_TW&dateRange=1D&colorTheme=dark&trendLineColor=%2300e5ff&underLineColor=rgba(0%2C229%2C255%2C0.08)&isTransparent=true&autosize=true`;}
+
+function initTabs(){
+  const tabs = document.getElementById("tvTabs");
+  tabs.innerHTML = COINS.map((c,i)=>`<button class="tv-tab${i===0?" active":""}" onclick="switchChart(${i},this)">${c.sym}</button>`).join("");
+  document.getElementById("tvFrame").src = tvUrl(COINS[0].tv);
+}
+function switchChart(i, el){
+  document.querySelectorAll(".tv-tab").forEach(t=>t.classList.remove("active"));
+  el.classList.add("active");
+  activeChart = COINS[i];
+  document.getElementById("tvFrame").src = tvUrl(COINS[i].tv);
+  document.querySelectorAll(".mini-card").forEach((c,j)=>c.classList.toggle("active",j===i));
+}
+function initMiniCharts(){
+  document.getElementById("miniGrid").innerHTML = COINS.slice(0,4).map((c,i)=>`
+    <div class="mini-card${i===0?" active":""}" onclick="switchChart(${i}, document.querySelectorAll('.tv-tab')[${i}])">
+      <div class="mini-label">${c.sym}/USDT · 1H</div>
+      <iframe src="${tvMini(c.tv)}" title="${c.sym}"></iframe>
+    </div>`).join("");
+}
+
+// ── Status ────────────────────────────────────────────────────────
+function setStatus(msg, mode="idle"){
+  document.getElementById("statusTxt").textContent = msg;
+  const dot = document.getElementById("dot");
+  dot.className = "dot" + (mode==="scan"?" scan":mode==="live"?" live":"");
+}
+
+// ── Scan ──────────────────────────────────────────────────────────
+async function scanMarket(){
+  document.getElementById("scanBtn").disabled = true;
+  setStatus("抓取市場數據...", "scan");
+  try {
+    const r = await fetch("/market");
+    const d = await r.json();
+    if(Array.isArray(d.coins) && d.coins.length > 0){
+      lastCoins = d.coins;
+      renderCoins(d.coins);
+      renderLiquidity(d.coins);
+    }
+    if(d.fear_greed){ lastFg = d.fear_greed; renderFG(d.fear_greed); }
+    if(d.global){ lastGlobal = d.global; renderGlobal(d.global); }
+    document.getElementById("scanTime").textContent = "· "+new Date().toLocaleTimeString("zh-TW");
+    setStatus("更新完成 ✓", "live");
+  } catch(e) {
+    setStatus("❌ "+e.message, "idle");
+  }
+  document.getElementById("scanBtn").disabled = false;
+}
+
+// ── FG ────────────────────────────────────────────────────────────
+function renderFG(fg){
+  const v = parseInt(fg.value);
+  document.getElementById("fgNeedle").style.left = v+"%";
+  document.getElementById("fgNum").textContent = v;
+  const col = v<25?"#ff3b5c":v<45?"#ff8c42":v<55?"#ffd600":v<75?"#7eff6e":"#00ff9d";
+  const lbl = v<25?"極度恐懼":v<45?"恐懼":v<55?"中立":v<75?"貪婪":"極度貪婪";
+  document.getElementById("fgNum").style.color = col;
+  document.getElementById("fgLbl").textContent = lbl;
+}
+
+// ── Global ────────────────────────────────────────────────────────
+function renderGlobal(g){
+  document.getElementById("statsRow").style.display = "flex";
+  document.getElementById("sBtcDom").textContent = (g.btc_dominance||0).toFixed(1)+"%";
+  document.getElementById("sTotalMcap").textContent = "$"+fmt(g.total_market_cap_usd);
+  document.getElementById("sTotalVol").textContent = "$"+fmt(g.total_volume_usd);
+}
+
+// ── Coins ─────────────────────────────────────────────────────────
+function renderCoins(coins){
+  const grid = document.getElementById("coinGrid");
+  grid.innerHTML = coins.map(c=>{
+    const meta = COINS.find(x=>x.id===c.id); if(!meta) return "";
+    const sig = signal(c), p24=c.price_change_percentage_24h||0, p7d=c.price_change_percentage_7d_in_currency||0;
+    const cvd = (p24>=0?1:-1)*(c.total_volume/1e9), oi=(c.total_volume/c.market_cap*100).toFixed(1);
+    const ci = COINS.findIndex(x=>x.id===c.id);
+    return `<div class="coin-card" style="border-top-color:${sig.c}" onclick="switchChart(${ci}, document.querySelectorAll('.tv-tab')[${ci}])">
+      <div class="coin-head">
+        <div><div class="coin-sym">${meta.sym}</div><div class="coin-name-s">${meta.name}</div></div>
+        <div><div class="coin-price">${fmtPrice(c.current_price)}</div><div class="coin-pct ${p24>=0?'pos':'neg'}">${fmtPct(p24)}</div></div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-k">現貨CVD</div><div class="metric-v ${p24>=0?'pos':'neg'}">${p24>=0?"買壓":"賣壓"}主導</div></div>
+        <div class="metric"><div class="metric-k">CVD代理</div><div class="metric-v ${p24>=0?'pos':'neg'}">${(cvd>=0?"+":"")+cvd.toFixed(1)}B</div></div>
+        <div class="metric"><div class="metric-k">7D漲跌</div><div class="metric-v ${p7d>=0?'pos':'neg'}">${fmtPct(p7d)}</div></div>
+        <div class="metric"><div class="metric-k">OI/Vol</div><div class="metric-v" style="color:var(--accent)">${oi}%</div></div>
+        <div class="metric"><div class="metric-k">市值</div><div class="metric-v">$${fmt(c.market_cap)}</div></div>
+        <div class="metric"><div class="metric-k">24H量</div><div class="metric-v">$${fmt(c.total_volume)}</div></div>
+      </div>
+      <div class="sig-badge" style="border-color:${sig.c};color:${sig.c};background:${sig.c}18;">${sig.i} ${sig.l}</div>
+    </div>`;
+  }).join("");
+}
+
+// ── Liquidity ─────────────────────────────────────────────────────
+function renderLiquidity(coins){
+  document.getElementById("liqSection").style.display = "block";
+  const chips = [...coins].sort((a,b)=>b.total_volume-a.total_volume).map(c=>{
+    const meta=COINS.find(x=>x.id===c.id); if(!meta) return "";
+    const r=c.total_volume/c.market_cap, col=r>0.15?"#00ff9d":r>0.08?"#ffd600":"#ff3b5c";
+    return `<div class="liq-chip" style="color:${col};border-color:${col};background:${col}11;">${meta.sym} <span style="opacity:.6">${(r*100).toFixed(1)}%</span></div>`;
+  }).join("");
+  document.getElementById("liqChips").innerHTML = chips;
+}
+
+// ── AI ────────────────────────────────────────────────────────────
+function initPresets(){
+  document.getElementById("aiPresets").innerHTML = PRESETS.map(q=>
+    `<button class="ai-preset" onclick="askAI('${q}')">${q}</button>`
+  ).join("");
+}
+function sendQ(){
+  const q = document.getElementById("aiInput").value.trim();
+  if(!q) return;
+  askAI(q);
+  document.getElementById("aiInput").value = "";
+}
+async function askAI(q){
+  if(!apiKey){ document.getElementById("aiBody").style.color="var(--red)"; document.getElementById("aiBody").textContent="請先設定 Anthropic API Key（點右上角 🔑）"; return; }
+  if(lastCoins.length===0){ document.getElementById("aiBody").style.color="var(--muted)"; document.getElementById("aiBody").textContent="請先掃描市場數據再提問。"; return; }
+
+  document.getElementById("aiDots").style.display="flex";
+  document.getElementById("aiBody").style.color="var(--muted)";
+  document.getElementById("aiBody").style.fontStyle="italic";
+  document.getElementById("aiBody").textContent="正在分析...";
+  document.getElementById("aiSub").textContent="分析中...";
+
+  const summary = lastCoins.slice(0,8).map(c=>{
+    const m=COINS.find(x=>x.id===c.id);
+    return `${m?.sym}: $${c.current_price?.toFixed(2)}, 24h:${(c.price_change_percentage_24h||0).toFixed(2)}%, 7d:${(c.price_change_percentage_7d_in_currency||0).toFixed(2)}%, vol:$${fmt(c.total_volume)}`;
+  }).join("\n");
+  const fgLine = lastFg?`恐懼貪婪指數: ${lastFg.value} (${lastFg.value_classification})`:"";
+  const glbLine = lastGlobal?`BTC主導率:${lastGlobal.btc_dominance?.toFixed(1)}%, 總市值:$${fmt(lastGlobal.total_market_cap_usd)}`:"";
+
+  const prompt = `你是專業加密貨幣分析師。即時市場數據：\n${fgLine}\n${glbLine}\n${summary}\n\n請用繁體中文回答：${q}\n\n語氣直接像資深交易員，每段空行分隔。`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const text = data.content?.find(b=>b.type==="text")?.text || "無回應";
+    document.getElementById("aiBody").style.color="var(--text)";
+    document.getElementById("aiBody").style.fontStyle="normal";
+    document.getElementById("aiBody").textContent=text;
+    document.getElementById("aiSub").textContent="完成 · "+new Date().toLocaleTimeString("zh-TW");
+  } catch(e) {
+    document.getElementById("aiBody").style.color="var(--red)";
+    document.getElementById("aiBody").textContent="❌ "+e.message;
+  }
+  document.getElementById("aiDots").style.display="none";
+}
+
+// ── Auto scan ─────────────────────────────────────────────────────
+function toggleAuto(){
+  const btn = document.getElementById("autoBtn");
+  if(autoTimer){
+    clearInterval(autoTimer); autoTimer=null;
+    btn.classList.remove("on"); btn.textContent="⏱ 自動";
+    setStatus("自動掃描已停止","idle");
+  } else {
+    scanMarket();
+    autoTimer = setInterval(scanMarket, 60000);
+    btn.classList.add("on"); btn.textContent="⏹ 停止";
+    setStatus("每 60 秒自動更新","live");
+  }
+}
+
+// ── API Key modal ─────────────────────────────────────────────────
+function openKeyModal(){ document.getElementById("keyInput").value=apiKey; document.getElementById("keyModal").classList.add("show"); }
+function closeKeyModal(){ document.getElementById("keyModal").classList.remove("show"); }
+function saveKey(){ apiKey=document.getElementById("keyInput").value.trim(); localStorage.setItem("anthropic_key",apiKey); closeKeyModal(); }
+
+// ── Init ──────────────────────────────────────────────────────────
+initTabs();
+initMiniCharts();
+initPresets();
+</script>
+</body>
+</html>
