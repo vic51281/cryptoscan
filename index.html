@@ -193,8 +193,10 @@ main{max-width:1300px;margin:0 auto;padding:18px 16px 40px;position:relative;z-i
       輸入後可啟用 AI 分析功能。無 Key 可直接關閉，TradingView 圖表與市場數據仍可正常使用。
     </div>
     <input type="password" class="modal-input" id="keyInput" placeholder="sk-ant-api03-...">
+    <div id="keyStatus" style="font-family:monospace;font-size:11px;margin-bottom:8px;display:none;"></div>
     <div class="modal-btns">
       <button class="btn" style="flex:1;" onclick="saveKey()">儲存</button>
+      <button class="btn" style="border-color:var(--red);color:var(--red);" onclick="clearKey()">🗑 清除</button>
       <button class="btn" style="border-color:var(--border);color:var(--muted);" onclick="closeKeyModal()">關閉</button>
     </div>
   </div>
@@ -409,9 +411,32 @@ function toggleAuto(){
 }
 
 // ── API Key modal ─────────────────────────────────────────────────
-function openKeyModal(){ document.getElementById("keyInput").value=apiKey; document.getElementById("keyModal").classList.add("show"); }
+function openKeyModal(){
+  document.getElementById("keyInput").value=apiKey;
+  const st=document.getElementById("keyStatus");
+  st.style.display=apiKey?"block":"none";
+  st.style.color="var(--green)";
+  st.textContent=apiKey?"✅ 目前已設定 Key："+apiKey.slice(0,12)+"...":"";
+  document.getElementById("keyModal").classList.add("show");
+}
 function closeKeyModal(){ document.getElementById("keyModal").classList.remove("show"); }
-function saveKey(){ apiKey=document.getElementById("keyInput").value.trim(); localStorage.setItem("anthropic_key",apiKey); closeKeyModal(); }
+function saveKey(){
+  apiKey=document.getElementById("keyInput").value.trim();
+  localStorage.setItem("anthropic_key",apiKey);
+  const st=document.getElementById("keyStatus");
+  st.style.display="block"; st.style.color="var(--green)";
+  st.textContent="✅ Key 已儲存";
+  setTimeout(closeKeyModal,800);
+}
+function clearKey(){
+  apiKey="";
+  localStorage.removeItem("anthropic_key");
+  document.getElementById("keyInput").value="";
+  const st=document.getElementById("keyStatus");
+  st.style.display="block"; st.style.color="var(--red)";
+  st.textContent="🗑 Key 已清除";
+  setTimeout(closeKeyModal,800);
+}
 
 // ── Init ──────────────────────────────────────────────────────────
 initTabs();
