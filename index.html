@@ -58,7 +58,7 @@ main{max-width:1300px;margin:0 auto;padding:18px 16px 40px;position:relative;z-i
 .mini-card{background:var(--surface);border:1px solid var(--border);cursor:pointer;overflow:hidden;transition:border-color .2s;}
 .mini-card:hover,.mini-card.active{border-color:var(--accent);}
 .mini-label{padding:6px 10px;font-family:monospace;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);}
-.mini-card iframe{width:100%;height:100px;border:none;display:block;}
+.mini-card iframe{width:100%;height:140px;border:none;display:block;}
 
 /* Coin cards */
 .coin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:9px;margin-bottom:16px;}
@@ -212,6 +212,8 @@ const COINS = [
   {id:"dogecoin",     sym:"DOGE", name:"Dogecoin",  tv:"BINANCE:DOGEUSDT"},
   {id:"cardano",      sym:"ADA",  name:"Cardano",   tv:"BINANCE:ADAUSDT"},
   {id:"avalanche-2",  sym:"AVAX", name:"Avalanche", tv:"BINANCE:AVAXUSDT"},
+  {id:null,           sym:"XAU",  name:"黃金合約",  tv:"OKX:XAUUSDT.P",  noData:true},
+  {id:null,           sym:"CL",   name:"原油合約",  tv:"OKX:CLUSDT.P",   noData:true},
 ];
 const PRESETS = [
   "做全面市場分析並給出操作建議",
@@ -252,11 +254,44 @@ function switchChart(i, el){
   document.querySelectorAll(".mini-card").forEach((c,j)=>c.classList.toggle("active",j===i));
 }
 function initMiniCharts(){
-  document.getElementById("miniGrid").innerHTML = COINS.slice(0,4).map((c,i)=>`
-    <div class="mini-card${i===0?" active":""}" onclick="switchChart(${i}, document.querySelectorAll('.tv-tab')[${i}])">
-      <div class="mini-label">${c.sym}/USDT · 1H</div>
-      <iframe src="${tvMini(c.tv)}" title="${c.sym}"></iframe>
-    </div>`).join("");
+  const miniCoins = [...COINS.slice(0,4), ...COINS.filter(c=>c.noData)];
+  const grid = document.getElementById("miniGrid");
+  grid.innerHTML = "";
+  miniCoins.forEach((c)=>{
+    const i = COINS.indexOf(c);
+    const label = c.noData ? c.sym+" · "+c.name+" · 1H" : c.sym+"/USDT · 1H";
+    const div = document.createElement("div");
+    div.className = "mini-card" + (i===0?" active":"");
+    div.onclick = ()=>switchChart(i, document.querySelectorAll(".tv-tab")[i]);
+    div.innerHTML = "<div class=\"mini-label\">"+label+"</div>";
+    const container = document.createElement("div");
+    container.className = "tradingview-widget-container";
+    container.style.height = "140px";
+    const widget = document.createElement("div");
+    widget.className = "tradingview-widget-container__widget";
+    widget.style.height = "140px";
+    container.appendChild(widget);
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
+    script.async = true;
+    script.innerHTML = JSON.stringify({
+      symbol: c.tv,
+      width: "100%",
+      height: 140,
+      locale: "zh_TW",
+      dateRange: "1D",
+      colorTheme: "dark",
+      trendLineColor: "#00e5ff",
+      underLineColor: "rgba(0,229,255,0.08)",
+      isTransparent: true,
+      autosize: true,
+      largeChartUrl: ""
+    });
+    container.appendChild(script);
+    div.appendChild(container);
+    grid.appendChild(div);
+  });
 }
 
 // ── Status ────────────────────────────────────────────────────────
@@ -310,7 +345,7 @@ function renderGlobal(g){
 // ── Coins ─────────────────────────────────────────────────────────
 function renderCoins(coins){
   const grid = document.getElementById("coinGrid");
-  grid.innerHTML = coins.map(c=>{
+  let html = coins.map(c=>{
     const meta = COINS.find(x=>x.id===c.id); if(!meta) return "";
     const sig = signal(c), p24=c.price_change_percentage_24h||0, p7d=c.price_change_percentage_7d_in_currency||0;
     const cvd = (p24>=0?1:-1)*(c.total_volume/1e9), oi=(c.total_volume/c.market_cap*100).toFixed(1);
@@ -331,6 +366,22 @@ function renderCoins(coins){
       <div class="sig-badge" style="border-color:${sig.c};color:${sig.c};background:${sig.c}18;">${sig.i} ${sig.l}</div>
     </div>`;
   }).join("");
+  // OKX 永續合約卡片
+  COINS.filter(c=>c.noData).forEach(c=>{
+    const ci = COINS.indexOf(c);
+    html += `<div class="coin-card" style="border-top-color:#00e5ff" onclick="switchChart(${ci}, document.querySelectorAll('.tv-tab')[${ci}])">
+      <div class="coin-head">
+        <div><div class="coin-sym">${c.sym}</div><div class="coin-name-s">${c.name} · OKX 永續</div></div>
+        <div style="text-align:right;margin-top:4px;font-size:10px;color:var(--muted);">點擊查看圖表</div>
+      </div>
+      <div style="padding:16px 0;text-align:center;color:var(--muted);font-size:12px;line-height:2;">
+        TradingView 即時 K 線<br/>
+        <span style="color:#00e5ff;font-family:monospace;font-size:11px;">${c.tv}</span>
+      </div>
+      <div class="sig-badge" style="border-color:#00e5ff;color:#00e5ff;background:#00e5ff18;">📈 查看 K 線圖</div>
+    </div>`;
+  });
+  grid.innerHTML = html;
 }
 
 // ── Liquidity ─────────────────────────────────────────────────────
