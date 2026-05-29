@@ -1,14 +1,22 @@
 from flask import Flask, jsonify, send_file
 from flask_cors import CORS
 import requests
-import os
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+# Top 50 coins CoinGecko IDs (matching COINS array in frontend)
 COINS = [
-    "bitcoin", "ethereum", "solana", "binancecoin",
-    "ripple", "dogecoin", "cardano", "avalanche-2"
+    "bitcoin","ethereum","ripple","binancecoin","solana",
+    "dogecoin","cardano","tron","avalanche-2","chainlink",
+    "the-open-network","sui","shiba-inu","stellar","polkadot",
+    "litecoin","bitcoin-cash","uniswap","near","aptos",
+    "internet-computer","ethereum-classic","matic-network","arbitrum","bittensor",
+    "cosmos","optimism","filecoin","crypto-com-chain","injective-protocol",
+    "vechain","maker","the-graph","aave","algorand",
+    "blockstack","fantom","worldcoin-wld","jupiter-exchange-solana","ethena",
+    "bonk","sei-network","dogwifcoin","pudgy-penguins","hedera-hashgraph",
+    "ondo-finance","official-trump","movement"
 ]
 
 @app.route("/")
@@ -18,18 +26,22 @@ def index():
 @app.route("/market")
 def market():
     result = {}
-    try:
-        ids = ",".join(COINS)
-        r = requests.get(
-            f"https://api.coingecko.com/api/v3/coins/markets"
-            f"?vs_currency=usd&ids={ids}&order=market_cap_desc"
-            f"&sparkline=false&price_change_percentage=24h,7d",
-            timeout=8
-        )
-        result["coins"] = r.json()
-    except Exception as e:
-        result["coins"] = []
-        result["coins_error"] = str(e)
+
+    # Fetch in batches of 25 (CoinGecko free API limit)
+    all_coins = []
+    for i in range(0, len(COINS), 25):
+        batch = COINS[i:i+25]
+        try:
+            r = requests.get(
+                "https://api.coingecko.com/api/v3/coins/markets"
+                "?vs_currency=usd&ids=" + ",".join(batch) +
+                "&order=market_cap_desc&sparkline=false&price_change_percentage=24h,7d",
+                timeout=10
+            )
+            all_coins.extend(r.json())
+        except Exception as e:
+            result["coins_error"] = str(e)
+    result["coins"] = all_coins
 
     try:
         r = requests.get("https://api.alternative.me/fng/?limit=1", timeout=5)
