@@ -99,6 +99,57 @@ main{max-width:1300px;margin:0 auto;padding:18px 16px 40px;position:relative;z-i
 .dots span:nth-child(3){animation-delay:.4s;}
 @keyframes bounce{0%,100%{opacity:.3;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
 
+/* Search */
+.search-bar{display:flex;gap:8px;margin-bottom:16px;}
+.search-input{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:monospace;font-size:14px;padding:10px 16px;outline:none;transition:border-color .2s;}
+.search-input:focus{border-color:var(--accent);}
+.search-results{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-bottom:16px;}
+.search-result-item{background:var(--surface);border:1px solid var(--border);padding:10px 14px;cursor:pointer;transition:all .2s;font-family:monospace;}
+.search-result-item:hover{border-color:var(--accent);background:rgba(0,229,255,.05);}
+.sr-sym{font-size:14px;font-weight:700;color:var(--text);}
+.sr-name{font-size:10px;color:var(--muted);margin-top:2px;}
+
+/* Detail Modal */
+.detail-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;align-items:center;justify-content:center;padding:16px;}
+.detail-modal.show{display:flex;}
+.detail-box{background:#0d1420;border:1px solid var(--border);border-left:3px solid var(--accent);max-width:560px;width:100%;max-height:90vh;overflow-y:auto;position:relative;}
+.detail-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+.detail-sym{font-family:monospace;font-size:22px;font-weight:700;color:var(--text);}
+.detail-exchange{font-size:11px;color:var(--accent);font-family:monospace;margin-top:2px;}
+.detail-price{font-family:monospace;font-size:18px;font-weight:700;text-align:right;}
+.detail-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;line-height:1;}
+.detail-close:hover{color:var(--text);}
+.detail-score-box{margin:16px 20px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);padding:14px 18px;display:flex;align-items:center;gap:16px;}
+.score-num{font-family:monospace;font-size:36px;font-weight:700;}
+.score-label{font-size:13px;color:var(--text);font-weight:600;}
+.score-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.score-bars{display:flex;gap:4px;margin-top:6px;}
+.score-bar{width:22px;height:8px;border-radius:2px;background:var(--border);}
+.score-bar.fill-buy{background:var(--green);}
+.score-bar.fill-sell{background:var(--red);}
+.score-bar.fill-hold{background:var(--yellow);}
+.detail-rows{padding:0 20px 8px;}
+.detail-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(30,45,66,.7);}
+.detail-row:last-child{border-bottom:none;}
+.dr-label{font-size:13px;color:var(--muted);}
+.dr-tag{font-size:11px;padding:2px 8px;border-radius:2px;font-family:monospace;margin-right:6px;}
+.dr-tag.buy{background:rgba(0,255,157,.15);color:var(--green);}
+.dr-tag.sell{background:rgba(255,59,92,.15);color:var(--red);}
+.dr-tag.neutral{background:rgba(255,214,0,.12);color:var(--yellow);}
+.dr-val{font-family:monospace;font-size:13px;font-weight:700;text-align:right;}
+.dr-sub{font-size:11px;color:var(--muted);text-align:right;margin-top:2px;}
+.detail-score-breakdown{padding:0 20px 16px;}
+.dsb-title{font-family:monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;}
+.dsb-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(30,45,66,.5);}
+.dsb-row:last-child{border-bottom:1px solid var(--border);}
+.dsb-name{font-size:12px;color:var(--muted);}
+.dsb-pts{font-family:monospace;font-size:12px;font-weight:700;}
+.dsb-total{display:flex;justify-content:space-between;padding:10px 0 4px;font-family:monospace;font-weight:700;}
+.tv-btn{display:block;margin:12px 20px 16px;padding:10px;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:monospace;font-size:12px;cursor:pointer;transition:all .2s;text-decoration:none;}
+.tv-btn:hover{background:rgba(0,229,255,.1);}
+.loading-overlay{padding:40px;text-align:center;color:var(--muted);font-family:monospace;font-size:13px;}
+
+
 .footer{text-align:center;padding:16px 0;border-top:1px solid var(--border);margin-top:16px;font-family:monospace;font-size:10px;color:var(--muted);}
 .empty{text-align:center;padding:40px;color:var(--muted);font-size:13px;}
 
@@ -527,6 +578,223 @@ function clearKey(){
   st.style.display="block"; st.style.color="var(--red)";
   st.textContent="🗑 Key 已清除";
   setTimeout(closeKeyModal,800);
+}
+
+
+// ── Search ────────────────────────────────────────────────────────
+function onSearch(val) {
+  const q = val.trim().toUpperCase();
+  const results = document.getElementById("searchResults");
+  if (!q) { results.innerHTML = ""; return; }
+  const matches = COINS.filter(c =>
+    c.sym.includes(q) || c.name.toUpperCase().includes(q)
+  ).slice(0, 20);
+  if (matches.length === 0) {
+    results.innerHTML = '<div style="color:var(--muted);font-size:12px;font-family:monospace;padding:10px;">找不到符合的幣種</div>';
+    return;
+  }
+  results.innerHTML = matches.map(c => `
+    <div class="search-result-item" onclick="openDetail('${c.sym}','${c.tv}')">
+      <div class="sr-sym">${c.sym}</div>
+      <div class="sr-name">${c.name}</div>
+      <div style="font-size:9px;color:var(--accent);font-family:monospace;margin-top:3px;">OKX 永續</div>
+    </div>`).join("");
+}
+
+// ── Detail Modal ──────────────────────────────────────────────────
+function closeDetail() {
+  document.getElementById("detailModal").classList.remove("show");
+}
+document.addEventListener("keydown", e => { if(e.key==="Escape") closeDetail(); });
+
+async function openDetail(sym, tvSym) {
+  const modal = document.getElementById("detailModal");
+  const box   = document.getElementById("detailBox");
+  modal.classList.add("show");
+  box.innerHTML = `<div class="loading-overlay"><div class="dots" style="display:inline-flex;gap:4px;"><span></span><span></span><span></span></div><br><br>載入 ${sym} 數據中...</div>`;
+
+  try {
+    const r = await fetch("/detail/" + sym);
+    const d = await r.json();
+    renderDetail(sym, tvSym, d);
+  } catch(e) {
+    box.innerHTML = `<div class="loading-overlay">❌ 載入失敗：${e.message}<br><br><button class="btn" onclick="closeDetail()">關閉</button></div>`;
+  }
+}
+
+function renderDetail(sym, tvSym, d) {
+  const box = document.getElementById("detailBox");
+
+  // ── 計算評分 ──────────────────────────────────────────────────
+  let score = 0;
+  const breakdown = [];
+
+  // 市場結構 (CVD + 價格動能)
+  const p24 = d.price_24h_pct || 0;
+  if (p24 > 5)       { score += 5; breakdown.push(["動能 24H +"+(p24.toFixed(2))+"%", +5]); }
+  else if (p24 > 1)  { score += 3; breakdown.push(["動能 24H +"+(p24.toFixed(2))+"%", +3]); }
+  else if (p24 < -5) { score -= 5; breakdown.push(["動能 24H "+(p24.toFixed(2))+"%", -5]); }
+  else if (p24 < -1) { score -= 3; breakdown.push(["動能 24H "+(p24.toFixed(2))+"%", -3]); }
+
+  // OI 1H 變化
+  const oi1h = d.oi_1h_pct;
+  if (oi1h !== null) {
+    if (oi1h > 3 && p24 > 0)  { score += 5; breakdown.push(["市場結構 OI 1H +"+(oi1h.toFixed(1))+"% / CVD 買壓", +5]); }
+    else if (oi1h > 3 && p24 < 0) { score -= 3; breakdown.push(["OI 增 但價格跌 (空方佔優)", -3]); }
+    else if (oi1h < -2) { score -= 2; breakdown.push(["OI 減少 -"+(Math.abs(oi1h).toFixed(1))+"%", -2]); }
+    else { score += 0; breakdown.push(["OI 1H "+(oi1h>=0?"+":"")+(oi1h.toFixed(1))+"%", 0]); }
+  }
+
+  // 資金費率
+  const fr = d.funding_rate;
+  if (fr !== null) {
+    const frPct = fr * 100;
+    if (frPct > 0.1)       { score += 0; breakdown.push(["資金費率 +"+(frPct.toFixed(4))+"% (略高，多方付費)", 0]); }
+    else if (frPct > 0.05) { score += 0; breakdown.push(["資金費率 +"+(frPct.toFixed(4))+"%", 0]); }
+    else if (frPct < -0.05){ score += 5; breakdown.push(["資金費率 "+(frPct.toFixed(4))+"% (負費率，利多)", +5]); }
+    else                    { score += 0; breakdown.push(["資金費率 "+(frPct.toFixed(4))+"%", 0]); }
+  }
+
+  // 多空比
+  const lr = d.long_ratio, sr2 = d.short_ratio;
+  if (lr !== null) {
+    if (lr > 60)       { score += 0; breakdown.push(["多空比 多頭 "+(lr.toFixed(1))+"% (過熱)", 0]); }
+    else if (lr < 40)  { score += 5; breakdown.push(["多空比 空頭偏多 "+(lr.toFixed(1))+"% (逆勢做多)", +5]); }
+    else               { score += 0; breakdown.push(["多空比 均衡 做多 "+(lr.toFixed(1))+"%", 0]); }
+  }
+
+  // 爆倉方向
+  const ll = d.liq_long, ls = d.liq_short;
+  if (ll !== null && ls !== null) {
+    if (ls > ll * 1.5) { score += 5; breakdown.push(["爆倉方向 空單爆倉 "+(fmtNum(ls))+" / 多單 "+(fmtNum(ll)), +5]); }
+    else if (ll > ls * 1.5) { score -= 5; breakdown.push(["爆倉方向 多單爆倉 "+(fmtNum(ll))+" / 空單 "+(fmtNum(ls)), -5]); }
+    else { breakdown.push(["爆倉方向 均衡 多 "+(fmtNum(ll))+" / 空 "+(fmtNum(ls)), 0]); }
+  }
+
+  // 正規化 score 到 0-10
+  const raw = score;
+  const normalized = Math.max(0, Math.min(10, Math.round((score + 20) / 4)));
+  const sentiment = score >= 8 ? "做多" : score >= 2 ? "偏多" : score >= -2 ? "中性" : score >= -8 ? "偏空" : "做空";
+  const sentCls   = score >= 2 ? "buy" : score <= -2 ? "sell" : "neutral";
+  const sentColor = score >= 2 ? "var(--green)" : score <= -2 ? "var(--red)" : "var(--yellow)";
+
+  // Score bars
+  const bars = Array.from({length:10}, (_,i) =>
+    `<div class="score-bar ${i < normalized ? (sentCls==="buy"?"fill-buy":sentCls==="sell"?"fill-sell":"fill-hold") : ""}"></div>`
+  ).join("");
+
+  // ── Render ────────────────────────────────────────────────────
+  const frDisplay  = fr !== null ? ((fr*100).toFixed(4))+"%" : "--";
+  const frColor    = fr === null ? "var(--muted)" : fr > 0.05 ? "var(--red)" : fr < -0.01 ? "var(--green)" : "var(--text)";
+  const oiDisplay  = d.open_interest ? fmtNum(d.open_interest) + " " + sym : "--";
+  const oi1hDisp   = oi1h !== null ? (oi1h>=0?"+":"") + oi1h.toFixed(2)+"%" : "--";
+  const oi1hColor  = oi1h === null ? "var(--muted)" : oi1h > 0 ? "var(--green)" : "var(--red)";
+  const lrDisp     = lr !== null ? lr.toFixed(1)+"%" : "--";
+  const srDisp     = sr2 !== null ? sr2.toFixed(1)+"%" : "--";
+  const liqDir     = ll===null ? "--" : ll > ls*1.5 ? "多單為主" : ls > ll*1.5 ? "空單為主" : "均衡";
+  const liqColor   = ll===null ? "var(--muted)" : ll > ls*1.5 ? "var(--red)" : ls > ll*1.5 ? "var(--green)" : "var(--yellow)";
+  const p24color   = p24 >= 0 ? "var(--green)" : "var(--red)";
+  const priceDisp  = d.price ? fmtPrice2(d.price) : "--";
+
+  box.innerHTML = `
+    <div class="detail-header">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="detail-sym">${sym}</div>
+          <span style="font-size:11px;background:rgba(0,229,255,.1);color:var(--accent);padding:2px 8px;font-family:monospace;">TV</span>
+        </div>
+        <div class="detail-exchange">OKX 永續合約 · USDT</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="detail-price">${priceDisp}</div>
+        <div style="font-family:monospace;font-size:13px;color:${p24color};margin-top:2px;">${p24>=0?"+":""}${p24.toFixed(2)}%</div>
+      </div>
+      <button class="detail-close" onclick="closeDetail()">✕</button>
+    </div>
+
+    <div class="detail-score-box">
+      <div style="text-align:center;min-width:70px;">
+        <div class="score-num" style="color:${sentColor}">${score > 0 ? "+"+score : score}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:monospace;">分數</div>
+      </div>
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+          <span style="background:${sentColor}22;color:${sentColor};padding:3px 10px;font-family:monospace;font-size:12px;border:1px solid ${sentColor};">● ${sentiment}</span>
+        </div>
+        <div class="score-bars">${bars}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;font-family:monospace;">綜合評分 ${normalized}/10</div>
+      </div>
+    </div>
+
+    <div class="detail-rows">
+      <div class="detail-row">
+        <div><div class="dr-label">市場動態</div></div>
+        <div style="text-align:right;">
+          <span class="dr-tag ${p24>=1?"buy":p24<=-1?"sell":"neutral"}">${p24>=1?"買方主導":p24<=-1?"賣方主導":"中性"}</span>
+          <div class="dr-sub">${p24>=0?"+":""}${p24.toFixed(2)}% 24H</div>
+        </div>
+      </div>
+      <div class="detail-row">
+        <div><div class="dr-label">資金費率</div></div>
+        <div style="text-align:right;">
+          <span class="dr-tag ${fr!==null&&fr<-0.0001?"buy":fr!==null&&fr>0.0005?"sell":"neutral"}">${fr!==null&&fr>0.0005?"費率高":fr!==null&&fr<-0.0001?"負費率":"略高"}</span>
+          <div class="dr-val" style="color:${frColor}">${frDisplay}</div>
+        </div>
+      </div>
+      <div class="detail-row">
+        <div><div class="dr-label">未平倉量</div></div>
+        <div style="text-align:right;">
+          <div class="dr-val">${oiDisplay}</div>
+          <div class="dr-sub" style="color:${oi1hColor}">1H 變化 ${oi1hDisp}</div>
+        </div>
+      </div>
+      <div class="detail-row">
+        <div><div class="dr-label">散戶情緒</div></div>
+        <div style="text-align:right;">
+          <span class="dr-tag ${lr!==null&&lr<40?"buy":lr!==null&&lr>60?"sell":"neutral"}">${lr!==null&&lr<40?"中性":lr!==null&&lr>60?"偏多":"中性"}</span>
+          <div class="dr-sub">多空比 做多 ${lrDisp} / 做空 ${srDisp}</div>
+        </div>
+      </div>
+      <div class="detail-row">
+        <div><div class="dr-label">爆倉方向</div></div>
+        <div style="text-align:right;">
+          <div class="dr-val" style="color:${liqColor}">${liqDir}</div>
+          <div class="dr-sub">多單爆 ${ll!==null?fmtNum(ll):"--"} / 空單爆 ${ls!==null?fmtNum(ls):"--"}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-score-breakdown">
+      <div class="dsb-title">評分依據</div>
+      ${breakdown.map(([n,p])=>`
+        <div class="dsb-row">
+          <div class="dsb-name">${n}</div>
+          <div class="dsb-pts" style="color:${p>0?"var(--green)":p<0?"var(--red)":"var(--muted)"}">${p>0?"+":""}${p} 分</div>
+        </div>`).join("")}
+      <div class="dsb-total">
+        <div>總分</div>
+        <div style="color:${sentColor}">${raw > 0 ? "+"+raw : raw} 分 = ${normalized}/10</div>
+      </div>
+    </div>
+
+    <a class="tv-btn" onclick="closeDetail();switchChart(COINS.findIndex(c=>c.sym==='${sym}'), document.querySelectorAll('.tv-tab')[COINS.findIndex(c=>c.sym==='${sym}')]); window.scrollTo({top:document.getElementById('tvTabs').getBoundingClientRect().top + window.scrollY - 70, behavior:'smooth'});">
+      📈 查看 TradingView K 線圖
+    </a>
+  `;
+}
+
+function fmtNum(n) {
+  if(!n && n!==0) return "--";
+  if(Math.abs(n)>=1e9) return (n/1e9).toFixed(2)+"B";
+  if(Math.abs(n)>=1e6) return (n/1e6).toFixed(2)+"M";
+  if(Math.abs(n)>=1e3) return (n/1e3).toFixed(1)+"K";
+  return n.toFixed(2);
+}
+function fmtPrice2(p) {
+  if(!p) return "--";
+  if(p>=1000) return "$"+p.toLocaleString("en",{maximumFractionDigits:2});
+  if(p>=1) return "$"+p.toFixed(3);
+  return "$"+p.toFixed(6);
 }
 
 // ── Init ──────────────────────────────────────────────────────────
