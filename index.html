@@ -147,6 +147,42 @@ main{max-width:1300px;margin:0 auto;padding:18px 16px 40px;position:relative;z-i
 .dsb-total{display:flex;justify-content:space-between;padding:10px 0 4px;font-family:monospace;font-weight:700;}
 .tv-btn{display:block;margin:12px 20px 16px;padding:10px;text-align:center;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:monospace;font-size:12px;cursor:pointer;transition:all .2s;text-decoration:none;}
 .tv-btn:hover{background:rgba(0,229,255,.1);}
+
+/* OI Dashboard */
+.oi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:16px;}
+.oi-card{background:var(--surface);border:1px solid var(--border);padding:12px 14px;transition:border-color .2s;cursor:pointer;}
+.oi-card:hover{border-color:var(--accent);}
+.oi-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.oi-sym{font-family:monospace;font-size:14px;font-weight:700;}
+.oi-pct{font-family:monospace;font-size:13px;font-weight:700;}
+.oi-bar-wrap{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;margin:6px 0;}
+.oi-bar{height:100%;border-radius:3px;transition:width .6s ease;}
+.oi-stats{display:flex;justify-content:space-between;margin-top:6px;}
+.oi-stat-k{font-size:9px;color:var(--muted);font-family:monospace;letter-spacing:1px;text-transform:uppercase;}
+.oi-stat-v{font-size:11px;font-family:monospace;font-weight:700;margin-top:2px;}
+.oi-rank{font-size:9px;color:var(--muted);font-family:monospace;}
+
+/* Alerts */
+.alert-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.alert-card{background:var(--surface);border:1px solid var(--border);padding:14px 16px;border-left:3px solid var(--border);transition:all .2s;cursor:pointer;}
+.alert-card.high{border-left-color:var(--red);}
+.alert-card.medium{border-left-color:var(--yellow);}
+.alert-card:hover{border-color:var(--accent);}
+.alert-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.alert-sym{font-family:monospace;font-size:15px;font-weight:700;}
+.alert-price{font-family:monospace;font-size:13px;color:var(--muted);}
+.alert-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;}
+.alert-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;font-size:11px;font-family:monospace;border-radius:2px;}
+.alert-badge.high{background:rgba(255,59,92,.15);color:var(--red);border:1px solid rgba(255,59,92,.3);}
+.alert-badge.medium{background:rgba(255,214,0,.12);color:var(--yellow);border:1px solid rgba(255,214,0,.25);}
+.alert-msg{font-size:12px;color:var(--muted);line-height:1.6;}
+.alert-meta{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;}
+.alert-meta-item{font-family:monospace;font-size:10px;color:var(--muted);}
+.alert-meta-item span{color:var(--text);}
+.scan-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.scan-info{font-family:monospace;font-size:10px;color:var(--muted);}
+.empty-state{text-align:center;padding:32px;color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);}
+
 .loading-overlay{padding:40px;text-align:center;color:var(--muted);font-family:monospace;font-size:13px;}
 
 
@@ -230,7 +266,32 @@ main{max-width:1300px;margin:0 auto;padding:18px 16px 40px;position:relative;z-i
     <div class="ai-body" id="aiBody" style="color:var(--muted);font-style:italic;">點擊上方按鈕或輸入問題開始分析...</div>
   </div>
 
-  <div class="footer">
+  
+  <!-- OI Dashboard -->
+  <div class="sec-title" id="oiSection">OI 儀表板
+    <span id="oiScanTime" style="font-size:10px;color:var(--muted);font-weight:normal;letter-spacing:0;"></span>
+  </div>
+  <div class="scan-header">
+    <div class="scan-info" id="oiInfo">掃描前30大幣種的未平倉量變化</div>
+    <button class="btn" id="oiBtn" onclick="loadOIDashboard()">▶ 掃描 OI</button>
+  </div>
+  <div class="oi-grid" id="oiGrid">
+    <div class="empty-state" style="grid-column:1/-1;">點擊「掃描 OI」載入數據（約需 15-20 秒）</div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="sec-title" id="alertSection">持倉異常警報
+    <span id="alertScanTime" style="font-size:10px;color:var(--muted);font-weight:normal;letter-spacing:0;"></span>
+  </div>
+  <div class="scan-header">
+    <div class="scan-info" id="alertInfo">自動偵測 OI暴增、費率異常、多空極端、大量爆倉</div>
+    <button class="btn" style="border-color:var(--red);color:var(--red);" id="alertBtn" onclick="loadAlerts()">🚨 掃描警報</button>
+  </div>
+  <div class="alert-list" id="alertList">
+    <div class="empty-state">點擊「掃描警報」偵測異常（約需 15-20 秒）</div>
+  </div>
+
+<div class="footer">
     TradingView 即時圖表 · 數據來源 CoinGecko · AI 分析由 Claude 驅動<br>
     <span style="color:#ff6b3555;">⚠️ 僅供參考，不構成投資建議</span>
   </div>
@@ -813,6 +874,138 @@ function fmtPrice2(p) {
   if(p>=1000) return "$"+p.toLocaleString("en",{maximumFractionDigits:2});
   if(p>=1) return "$"+p.toFixed(3);
   return "$"+p.toFixed(6);
+}
+
+
+// ── OI Dashboard ──────────────────────────────────────────────────
+async function loadOIDashboard() {
+  const btn = document.getElementById("oiBtn");
+  const grid = document.getElementById("oiGrid");
+  btn.disabled = true; btn.textContent = "掃描中...";
+  grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="dots" style="display:inline-flex;gap:4px;"><span></span><span></span><span></span></div><br><br>掃描中，約需 15-20 秒...</div>';
+
+  try {
+    const r = await fetch("/oi-dashboard");
+    const data = await r.json();
+    renderOIDashboard(data);
+    document.getElementById("oiScanTime").textContent = "· " + new Date().toLocaleTimeString("zh-TW");
+    document.getElementById("oiInfo").textContent = `掃描完成，共 ${data.length} 個幣種`;
+  } catch(e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">❌ 載入失敗：${e.message}</div>`;
+  }
+  btn.disabled = false; btn.textContent = "▶ 重新掃描";
+}
+
+function renderOIDashboard(data) {
+  const grid = document.getElementById("oiGrid");
+  if (!data || data.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">無數據</div>';
+    return;
+  }
+
+  // Find max abs OI change for bar scaling
+  const maxOI = Math.max(...data.map(d => Math.abs(d.oi_1h_pct || 0)), 1);
+
+  grid.innerHTML = data.map((d, i) => {
+    const oi1h   = d.oi_1h_pct;
+    const fr     = d.funding_rate;
+    const lr     = d.long_ratio;
+    const p24    = d.pct24h || 0;
+    const oi1hColor = oi1h === null ? "var(--muted)" : oi1h > 0 ? "var(--green)" : "var(--red)";
+    const p24Color  = p24 >= 0 ? "var(--green)" : "var(--red)";
+    const frColor   = fr === null ? "var(--muted)" : fr > 0.0005 ? "var(--red)" : fr < -0.0001 ? "var(--green)" : "var(--text)";
+    const barWidth  = oi1h !== null ? Math.min(100, Math.abs(oi1h) / maxOI * 100) : 0;
+    const barColor  = oi1h === null ? "var(--muted)" : oi1h > 0 ? "var(--green)" : "var(--red)";
+
+    return `<div class="oi-card" onclick="openDetail('${d.sym}','OKX:${d.sym}USDT.P')">
+      <div class="oi-card-top">
+        <div>
+          <div class="oi-sym">${d.sym}</div>
+          <div class="oi-rank">#${i+1} OI變化排名</div>
+        </div>
+        <div class="oi-pct" style="color:${oi1hColor}">${oi1h !== null ? (oi1h>=0?"+":"")+oi1h.toFixed(2)+"%" : "--"}</div>
+      </div>
+      <div class="oi-bar-wrap">
+        <div class="oi-bar" style="width:${barWidth}%;background:${barColor};"></div>
+      </div>
+      <div class="oi-stats">
+        <div>
+          <div class="oi-stat-k">價格24H</div>
+          <div class="oi-stat-v" style="color:${p24Color}">${p24>=0?"+":""}${p24.toFixed(2)}%</div>
+        </div>
+        <div>
+          <div class="oi-stat-k">資金費率</div>
+          <div class="oi-stat-v" style="color:${frColor}">${fr !== null ? (fr*100).toFixed(4)+"%" : "--"}</div>
+        </div>
+        <div>
+          <div class="oi-stat-k">多空比</div>
+          <div class="oi-stat-v" style="color:${lr!==null&&lr<40?"var(--green)":lr!==null&&lr>60?"var(--red)":"var(--text)"}">${lr !== null ? lr.toFixed(0)+"%" : "--"}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Alerts ────────────────────────────────────────────────────────
+async function loadAlerts() {
+  const btn = document.getElementById("alertBtn");
+  const list = document.getElementById("alertList");
+  btn.disabled = true; btn.textContent = "掃描中...";
+  list.innerHTML = '<div class="empty-state"><div class="dots" style="display:inline-flex;gap:4px;"><span></span><span></span><span></span></div><br><br>掃描異常，約需 15-20 秒...</div>';
+
+  try {
+    const r = await fetch("/alerts");
+    const data = await r.json();
+    renderAlerts(data);
+    document.getElementById("alertScanTime").textContent = "· " + new Date().toLocaleTimeString("zh-TW");
+    document.getElementById("alertInfo").textContent = `發現 ${data.length} 個異常幣種`;
+  } catch(e) {
+    list.innerHTML = `<div class="empty-state">❌ 載入失敗：${e.message}</div>`;
+  }
+  btn.disabled = false; btn.textContent = "🚨 重新掃描";
+}
+
+function renderAlerts(data) {
+  const list = document.getElementById("alertList");
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div class="empty-state">✅ 目前無異常警報</div>';
+    return;
+  }
+
+  list.innerHTML = data.map(d => {
+    const p24  = d.pct24h || 0;
+    const p24c = p24 >= 0 ? "var(--green)" : "var(--red)";
+    const oi1h = d.oi_1h_pct;
+    const fr   = d.funding_rate;
+    const lr   = d.long_ratio;
+
+    const badges = d.alerts.map(a =>
+      `<span class="alert-badge ${a.level}">${a.icon} ${a.type}</span>`
+    ).join("");
+
+    const msgs = d.alerts.map(a =>
+      `<div>• ${a.msg}</div>`
+    ).join("");
+
+    return `<div class="alert-card ${d.max_level}" onclick="openDetail('${d.sym}','OKX:${d.sym}USDT.P')">
+      <div class="alert-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="alert-sym">${d.sym}</div>
+          <div class="alert-price" style="color:${p24c}">${p24>=0?"+":""}${p24.toFixed(2)}%</div>
+        </div>
+        <div style="font-family:monospace;font-size:11px;color:${d.max_level==="high"?"var(--red)":"var(--yellow)"};">
+          ${d.alert_count} 項警報 ${d.max_level==="high"?"🔴":"🟡"}
+        </div>
+      </div>
+      <div class="alert-badges">${badges}</div>
+      <div class="alert-msg">${msgs}</div>
+      <div class="alert-meta">
+        <div class="alert-meta-item">OI 1H <span style="color:${oi1h!==null&&oi1h>0?"var(--green)":oi1h!==null&&oi1h<0?"var(--red)":"var(--muted)"}">${oi1h !== null ? (oi1h>=0?"+":"")+oi1h.toFixed(2)+"%" : "--"}</span></div>
+        <div class="alert-meta-item">費率 <span style="color:${fr!==null&&fr>0.0005?"var(--red)":fr!==null&&fr<-0.0001?"var(--green)":"var(--text)"}">${fr !== null ? (fr*100).toFixed(4)+"%" : "--"}</span></div>
+        <div class="alert-meta-item">多空比 <span>${lr !== null ? lr.toFixed(1)+"%" : "--"}</span></div>
+      </div>
+    </div>`;
+  }).join("");
 }
 
 // ── Init ──────────────────────────────────────────────────────────
