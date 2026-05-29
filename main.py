@@ -15,7 +15,7 @@ COINS_CG = [
     "vechain","maker","the-graph","aave","algorand",
     "blockstack","fantom","worldcoin-wld","jupiter-exchange-solana","ethena",
     "bonk","sei-network","dogwifcoin","pudgy-penguins","hedera-hashgraph",
-    "ondo-finance","official-trump","movement"
+    "ondo-finance","official-trump","movement","zcash"
 ]
 
 @app.route("/")
