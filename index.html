@@ -704,50 +704,57 @@ async function openDetail(sym, tvSym) {
 function renderDetail(sym, tvSym, d) {
   const box = document.getElementById("detailBox");
 
+  // ── 安全取值（防止 undefined/null 導致 toFixed 爆炸）─────────
+  const safeNum = (v, fallback=0) => (v == null || isNaN(v)) ? fallback : Number(v);
+  const safeFixed = (v, digits=2, fallback="--") => (v == null || isNaN(v)) ? fallback : Number(v).toFixed(digits);
+
   // ── 計算評分 ──────────────────────────────────────────────────
   let score = 0;
   const breakdown = [];
 
-  // 市場結構 (CVD + 價格動能)
-  const p24 = d.price_24h_pct || 0;
-  if (p24 > 5)       { score += 5; breakdown.push(["動能 24H +"+(p24.toFixed(2))+"%", +5]); }
-  else if (p24 > 1)  { score += 3; breakdown.push(["動能 24H +"+(p24.toFixed(2))+"%", +3]); }
-  else if (p24 < -5) { score -= 5; breakdown.push(["動能 24H "+(p24.toFixed(2))+"%", -5]); }
-  else if (p24 < -1) { score -= 3; breakdown.push(["動能 24H "+(p24.toFixed(2))+"%", -3]); }
+  // 欄位名稱對應後端（pct24h 而非 price_24h_pct）
+  const p24  = safeNum(d.pct24h ?? d.price_24h_pct);
+  const oi1h = (d.oi_1h_pct != null && !isNaN(d.oi_1h_pct)) ? Number(d.oi_1h_pct) : null;
+  const fr   = (d.funding_rate != null && !isNaN(d.funding_rate)) ? Number(d.funding_rate) : null;
+  const lr   = (d.long_ratio != null && !isNaN(d.long_ratio)) ? Number(d.long_ratio) : null;
+  const sr2  = (d.short_ratio != null) ? Number(d.short_ratio) : null;
+  const ll   = (d.liq_long != null) ? Number(d.liq_long) : null;
+  const ls   = (d.liq_short != null) ? Number(d.liq_short) : null;
+
+  if (p24 > 5)       { score += 5; breakdown.push(["動能 24H +"+p24.toFixed(2)+"%", +5]); }
+  else if (p24 > 1)  { score += 3; breakdown.push(["動能 24H +"+p24.toFixed(2)+"%", +3]); }
+  else if (p24 < -5) { score -= 5; breakdown.push(["動能 24H "+p24.toFixed(2)+"%", -5]); }
+  else if (p24 < -1) { score -= 3; breakdown.push(["動能 24H "+p24.toFixed(2)+"%", -3]); }
 
   // OI 1H 變化
-  const oi1h = d.oi_1h_pct;
   if (oi1h !== null) {
-    if (oi1h > 3 && p24 > 0)  { score += 5; breakdown.push(["市場結構 OI 1H +"+(oi1h.toFixed(1))+"% / CVD 買壓", +5]); }
+    if (oi1h > 3 && p24 > 0)  { score += 5; breakdown.push(["市場結構 OI 1H +"+oi1h.toFixed(1)+"% / CVD 買壓", +5]); }
     else if (oi1h > 3 && p24 < 0) { score -= 3; breakdown.push(["OI 增 但價格跌 (空方佔優)", -3]); }
-    else if (oi1h < -2) { score -= 2; breakdown.push(["OI 減少 -"+(Math.abs(oi1h).toFixed(1))+"%", -2]); }
-    else { score += 0; breakdown.push(["OI 1H "+(oi1h>=0?"+":"")+(oi1h.toFixed(1))+"%", 0]); }
+    else if (oi1h < -2) { score -= 2; breakdown.push(["OI 減少 -"+Math.abs(oi1h).toFixed(1)+"%", -2]); }
+    else { breakdown.push(["OI 1H "+(oi1h>=0?"+":"")+oi1h.toFixed(1)+"%", 0]); }
   }
 
   // 資金費率
-  const fr = d.funding_rate;
   if (fr !== null) {
     const frPct = fr * 100;
-    if (frPct > 0.1)       { score += 0; breakdown.push(["資金費率 +"+(frPct.toFixed(4))+"% (略高，多方付費)", 0]); }
-    else if (frPct > 0.05) { score += 0; breakdown.push(["資金費率 +"+(frPct.toFixed(4))+"%", 0]); }
-    else if (frPct < -0.05){ score += 5; breakdown.push(["資金費率 "+(frPct.toFixed(4))+"% (負費率，利多)", +5]); }
-    else                    { score += 0; breakdown.push(["資金費率 "+(frPct.toFixed(4))+"%", 0]); }
+    if (frPct > 0.1)        { breakdown.push(["資金費率 +"+frPct.toFixed(4)+"% (略高，多方付費)", 0]); }
+    else if (frPct > 0.05)  { breakdown.push(["資金費率 +"+frPct.toFixed(4)+"%", 0]); }
+    else if (frPct < -0.05) { score += 5; breakdown.push(["資金費率 "+frPct.toFixed(4)+"% (負費率，利多)", +5]); }
+    else                    { breakdown.push(["資金費率 "+frPct.toFixed(4)+"%", 0]); }
   }
 
   // 多空比
-  const lr = d.long_ratio, sr2 = d.short_ratio;
   if (lr !== null) {
-    if (lr > 60)       { score += 0; breakdown.push(["多空比 多頭 "+(lr.toFixed(1))+"% (過熱)", 0]); }
-    else if (lr < 40)  { score += 5; breakdown.push(["多空比 空頭偏多 "+(lr.toFixed(1))+"% (逆勢做多)", +5]); }
-    else               { score += 0; breakdown.push(["多空比 均衡 做多 "+(lr.toFixed(1))+"%", 0]); }
+    if (lr > 60)      { breakdown.push(["多空比 多頭 "+lr.toFixed(1)+"% (過熱)", 0]); }
+    else if (lr < 40) { score += 5; breakdown.push(["多空比 空頭偏多 "+lr.toFixed(1)+"% (逆勢做多)", +5]); }
+    else              { breakdown.push(["多空比 均衡 做多 "+lr.toFixed(1)+"%", 0]); }
   }
 
   // 爆倉方向
-  const ll = d.liq_long, ls = d.liq_short;
   if (ll !== null && ls !== null) {
-    if (ls > ll * 1.5) { score += 5; breakdown.push(["爆倉方向 空單爆倉 "+(fmtNum(ls))+" / 多單 "+(fmtNum(ll)), +5]); }
-    else if (ll > ls * 1.5) { score -= 5; breakdown.push(["爆倉方向 多單爆倉 "+(fmtNum(ll))+" / 空單 "+(fmtNum(ls)), -5]); }
-    else { breakdown.push(["爆倉方向 均衡 多 "+(fmtNum(ll))+" / 空 "+(fmtNum(ls)), 0]); }
+    if (ls > ll * 1.5)      { score += 5; breakdown.push(["爆倉方向 空單爆倉 "+fmtNum(ls)+" / 多單 "+fmtNum(ll), +5]); }
+    else if (ll > ls * 1.5) { score -= 5; breakdown.push(["爆倉方向 多單爆倉 "+fmtNum(ll)+" / 空單 "+fmtNum(ls), -5]); }
+    else                    { breakdown.push(["爆倉方向 均衡 多 "+fmtNum(ll)+" / 空 "+fmtNum(ls), 0]); }
   }
 
   // 正規化 score 到 0-10
@@ -763,15 +770,16 @@ function renderDetail(sym, tvSym, d) {
   ).join("");
 
   // ── Render ────────────────────────────────────────────────────
-  const frDisplay  = fr !== null ? ((fr*100).toFixed(4))+"%" : "--";
-  const frColor    = fr === null ? "var(--muted)" : fr > 0.05 ? "var(--red)" : fr < -0.01 ? "var(--green)" : "var(--text)";
-  const oiDisplay  = d.open_interest ? fmtNum(d.open_interest) + " " + sym : "--";
-  const oi1hDisp   = oi1h !== null ? (oi1h>=0?"+":"") + oi1h.toFixed(2)+"%" : "--";
+  const frDisplay  = fr !== null ? (fr*100).toFixed(4)+"%" : "--";
+  const frColor    = fr === null ? "var(--muted)" : fr > 0.0005 ? "var(--red)" : fr < -0.0001 ? "var(--green)" : "var(--text)";
+  // 後端欄位是 oi (幣數量), oi_usd (USDT)
+  const oiDisplay  = d.oi ? fmtNum(d.oi)+" "+sym : (d.open_interest ? fmtNum(d.open_interest)+" "+sym : "--");
+  const oi1hDisp   = oi1h !== null ? (oi1h>=0?"+":"")+oi1h.toFixed(2)+"%" : "--";
   const oi1hColor  = oi1h === null ? "var(--muted)" : oi1h > 0 ? "var(--green)" : "var(--red)";
   const lrDisp     = lr !== null ? lr.toFixed(1)+"%" : "--";
   const srDisp     = sr2 !== null ? sr2.toFixed(1)+"%" : "--";
-  const liqDir     = ll===null ? "--" : ll > ls*1.5 ? "多單為主" : ls > ll*1.5 ? "空單為主" : "均衡";
-  const liqColor   = ll===null ? "var(--muted)" : ll > ls*1.5 ? "var(--red)" : ls > ll*1.5 ? "var(--green)" : "var(--yellow)";
+  const liqDir     = ll===null||ls===null ? "--" : ll > ls*1.5 ? "多單為主" : ls > ll*1.5 ? "空單為主" : "均衡";
+  const liqColor   = ll===null ? "var(--muted)" : ll > (ls||0)*1.5 ? "var(--red)" : (ls||0) > ll*1.5 ? "var(--green)" : "var(--yellow)";
   const p24color   = p24 >= 0 ? "var(--green)" : "var(--red)";
   const priceDisp  = d.price ? fmtPrice2(d.price) : "--";
 
