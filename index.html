@@ -236,6 +236,23 @@ main{max-width:1300px;margin:0 auto;padding:18px 16px 40px;position:relative;z-i
   </div>
 </main>
 
+<!-- Search Bar -->
+  <div id="searchSection" style="position:relative;z-index:1;max-width:1300px;margin:0 auto;padding:0 16px;">
+    <div class="sec-title" style="margin-top:22px;">幣種搜尋</div>
+    <div class="search-bar">
+      <input class="search-input" id="searchInput" placeholder="搜尋幣種，例如 BTC / ETH / SOL / ZEC..." oninput="onSearch(this.value)" autocomplete="off">
+      <button class="btn" onclick="document.getElementById('searchInput').value='';document.getElementById('searchResults').innerHTML='';">清除</button>
+    </div>
+    <div class="search-results" id="searchResults"></div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="detail-modal" id="detailModal">
+    <div class="detail-box" id="detailBox">
+      <div class="loading-overlay" id="detailLoading">載入中...</div>
+    </div>
+  </div>
+
 <!-- API Key Modal -->
 <div class="modal" id="keyModal">
   <div class="modal-box">
