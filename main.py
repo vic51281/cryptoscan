@@ -15,13 +15,13 @@ COINS_CG = [
     "vechain","maker","the-graph","aave","algorand",
     "blockstack","fantom","worldcoin-wld","jupiter-exchange-solana","ethena",
     "bonk","sei-network","dogwifcoin","pudgy-penguins","hedera-hashgraph",
-    "ondo-finance","official-trump","movement","zcash"
+    "ondo-finance","official-trump","movement","zcash","hyperliquid"
 ]
 
 # 只掃20個，減少 timeout 風險
 OKX_SCAN = [
     "BTC","ETH","SOL","BNB","XRP","DOGE","ADA","AVAX","LINK","TON",
-    "SUI","DOT","ARB","OP","INJ","TRX","LTC","NEAR","UNI","ZEC"
+    "SUI","DOT","ARB","OP","INJ","TRX","LTC","NEAR","UNI","ZEC","HYPE"
 ]
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
