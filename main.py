@@ -20,15 +20,71 @@ COINS_CG = [
 
 # 只掃20個，減少 timeout 風險
 OKX_SCAN = [
-    "BTC","ETH","SOL","BNB","XRP","DOGE","ADA","AVAX","LINK","TON",
-    "SUI","DOT","ARB","OP","INJ","TRX","LTC","NEAR","UNI","ZEC","HYPE"
+    "BTC","ETH","SOL","BNB","XRP","DOGE","ADA","AVAX",
+    "LINK","SUI","ARB","TRX","LTC","ZEC","HYPE"
 ]
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
+# ── 簡易記憶體快取 ────────────────────────────────────────────────
+_CACHE = {}
+CACHE_TTL = 90  # 秒
+
+def cache_get(key):
+    item = _CACHE.get(key)
+    if item and (time.time() - item["t"]) < CACHE_TTL:
+        return item["v"]
+    return None
+
+def cache_set(key, val):
+    _CACHE[key] = {"t": time.time(), "v": val}
+
+
+def fetch_scan_data(sym):
+    """掃描專用精簡版：只抓 4 個必要端點，加快速度"""
+    cached = cache_get("scan_" + sym)
+    if cached:
+        return cached
+
+    inst = f"{sym}-USDT-SWAP"
+    data = {"sym": sym}
+
+    d = okx_get(f"https://www.okx.com/api/v5/market/ticker?instId={inst}")
+    if d and d.get("data"):
+        t = d["data"][0]
+        last = float(t.get("last") or 0)
+        open24 = float(t.get("open24h") or 1) or 1
+        data["price"]  = last
+        data["pct24h"] = (last - open24) / open24 * 100
+
+    d = okx_get(f"https://www.okx.com/api/v5/public/funding-rate?instId={inst}")
+    if d and d.get("data"):
+        data["funding_rate"] = float(d["data"][0].get("fundingRate") or 0)
+
+    d = okx_get(f"https://www.okx.com/api/v5/rubik/stat/contracts/open-interest-volume?ccy={sym}&period=1H")
+    if d and d.get("data") and len(d["data"]) >= 2:
+        try:
+            latest = float(d["data"][0][1]); prev = float(d["data"][1][1])
+            data["oi_1h_pct"] = (latest - prev) / prev * 100 if prev else 0
+        except:
+            pass
+
+    d = okx_get(f"https://www.okx.com/api/v5/rubik/stat/contracts/long-short-account-ratio?ccy={sym}&period=5m")
+    if d and d.get("data"):
+        try:
+            row = d["data"][0]
+            data["long_ratio"] = float(row[1]) * 100
+            data["short_ratio"] = float(row[2]) * 100
+        except:
+            pass
+
+    cache_set("scan_" + sym, data)
+    return data
+
+
 def okx_get(url):
     try:
-        r = requests.get(url, timeout=4, headers=HEADERS)
+        r = requests.get(url, timeout=3, headers=HEADERS)
         d = r.json()
         return d if d.get("code") == "0" else None
     except Exception:
@@ -136,7 +192,7 @@ def oi_dashboard():
     results = []
     for sym in OKX_SCAN:
         try:
-            results.append(fetch_coin_data(sym))
+            results.append(fetch_scan_data(sym))
         except Exception:
             pass
     results.sort(key=lambda x: abs(x.get("oi_1h_pct") or 0), reverse=True)
@@ -147,7 +203,7 @@ def alerts():
     all_data = []
     for sym in OKX_SCAN:
         try:
-            all_data.append(fetch_coin_data(sym))
+            all_data.append(fetch_scan_data(sym))
         except Exception:
             pass
 
@@ -175,9 +231,6 @@ def alerts():
                 triggered.append({"type":"多方過擠","level":"medium","msg":f"多空比 {lr:.1f}% 做多，散戶過度樂觀","icon":"🐂"})
             elif lr < 30:
                 triggered.append({"type":"空方過擠","level":"medium","msg":f"多空比 {lr:.1f}% 做多，恐慌性做空","icon":"🐻"})
-        total_liq = ll + ls
-        if total_liq > 1000000:
-            triggered.append({"type":"大量爆倉","level":"high","msg":f"5分鐘爆倉 ${total_liq/1e6:.1f}M","icon":"💥"})
         if oi1h is not None and oi1h > 3 and p24 < -2:
             triggered.append({"type":"空方建倉","level":"high","msg":f"OI +{oi1h:.1f}% 但價格跌 {p24:.1f}%","icon":"🚨"})
 
