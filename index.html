@@ -183,6 +183,62 @@ main{max-width:1300px;margin:0 auto;padding:18px 16px 40px;position:relative;z-i
 .scan-info{font-family:monospace;font-size:10px;color:var(--muted);}
 .empty-state{text-align:center;padding:32px;color:var(--muted);font-size:13px;background:var(--surface);border:1px solid var(--border);}
 
+/* SNR Analysis */
+.snr-controls{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.snr-input{flex:1;min-width:150px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:monospace;font-size:14px;padding:10px 14px;outline:none;}
+.snr-input:focus{border-color:var(--accent);}
+.tf-group{display:flex;gap:4px;}
+.tf-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);font-family:monospace;font-size:11px;padding:9px 13px;cursor:pointer;transition:all .2s;}
+.tf-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,229,255,.08);}
+.snr-result{background:var(--surface);border:1px solid var(--border);margin-bottom:16px;}
+.snr-verdict{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.verdict-badge{padding:8px 18px;font-family:monospace;font-size:15px;font-weight:700;border:2px solid;}
+.verdict-badge.strong_long{color:var(--green);border-color:var(--green);background:rgba(0,255,157,.1);}
+.verdict-badge.long{color:#7eff6e;border-color:#7eff6e;background:rgba(126,255,110,.08);}
+.verdict-badge.neutral{color:var(--yellow);border-color:var(--yellow);background:rgba(255,214,0,.08);}
+.verdict-badge.short{color:#ff8c42;border-color:#ff8c42;background:rgba(255,140,66,.08);}
+.verdict-badge.strong_short{color:var(--red);border-color:var(--red);background:rgba(255,59,92,.1);}
+.snr-score{font-family:monospace;font-size:32px;font-weight:700;}
+.snr-meta{display:flex;gap:20px;flex-wrap:wrap;margin-top:4px;}
+.snr-meta-item{font-family:monospace;font-size:11px;color:var(--muted);}
+.snr-meta-item span{color:var(--text);}
+
+.level-section{padding:16px 20px;border-bottom:1px solid var(--border);}
+.level-title{font-family:monospace;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px;}
+.level-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;margin-bottom:5px;background:var(--surface2);border-left:3px solid var(--border);}
+.level-row.res{border-left-color:var(--red);}
+.level-row.sup{border-left-color:var(--green);}
+.level-row.current{border-left-color:var(--accent);background:rgba(0,229,255,.06);}
+.lv-price{font-family:monospace;font-size:14px;font-weight:700;}
+.lv-dist{font-family:monospace;font-size:11px;color:var(--muted);margin-left:8px;}
+.lv-tags{display:flex;gap:5px;align-items:center;}
+.lv-tag{font-size:9px;font-family:monospace;padding:2px 7px;border-radius:2px;}
+.lv-tag.fresh{background:rgba(0,255,157,.15);color:var(--green);border:1px solid rgba(0,255,157,.3);}
+.lv-tag.tested{background:rgba(90,122,154,.15);color:var(--muted);}
+.lv-tag.strong{background:rgba(0,229,255,.12);color:var(--accent);}
+.lv-strength{width:44px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.lv-strength-fill{height:100%;border-radius:3px;}
+
+.signal-list{padding:14px 20px;border-bottom:1px solid var(--border);}
+.signal-item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(30,45,66,.5);}
+.signal-item:last-child{border-bottom:none;}
+.sig-cat{font-family:monospace;font-size:9px;padding:2px 7px;flex-shrink:0;border-radius:2px;min-width:38px;text-align:center;}
+.sig-cat.SNR{background:rgba(0,229,255,.15);color:var(--accent);}
+.sig-cat.結構{background:rgba(126,255,110,.12);color:#7eff6e;}
+.sig-cat.燭台{background:rgba(255,214,0,.12);color:var(--yellow);}
+.sig-cat.微觀{background:rgba(255,59,92,.12);color:var(--red);}
+.sig-cat.情緒{background:rgba(255,140,66,.12);color:#ff8c42;}
+.sig-text{font-size:12px;line-height:1.6;flex:1;}
+.sig-dir{font-family:monospace;font-size:10px;flex-shrink:0;}
+
+.plan-box{padding:16px 20px;background:rgba(0,229,255,.03);}
+.plan-title{font-family:monospace;font-size:10px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:10px;}
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+.plan-cell{background:var(--surface2);padding:10px 12px;}
+.plan-k{font-family:monospace;font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+.plan-v{font-size:12px;font-weight:600;margin-top:4px;line-height:1.5;}
+
+
 .loading-overlay{padding:40px;text-align:center;color:var(--muted);font-family:monospace;font-size:13px;}
 
 
@@ -267,6 +323,25 @@ main{max-width:1300px;margin:0 auto;padding:18px 16px 40px;position:relative;z-i
   </div>
 
   
+
+  <!-- SNR Analysis -->
+  <div class="sec-title" id="snrSection">SNR 支撐壓力分析
+    <span id="snrTime" style="font-size:10px;color:var(--muted);font-weight:normal;letter-spacing:0;"></span>
+  </div>
+  <div class="snr-controls">
+    <input class="snr-input" id="snrInput" placeholder="輸入幣種，例如 BTC / ETH / HYPE..." value="BTC"
+           onkeydown="if(event.key==='Enter')runSNR()">
+    <div class="tf-group">
+      <button class="tf-btn" data-tf="1H" onclick="setTF('1H',this)">1H</button>
+      <button class="tf-btn active" data-tf="4H" onclick="setTF('4H',this)">4H</button>
+      <button class="tf-btn" data-tf="1D" onclick="setTF('1D',this)">1D</button>
+    </div>
+    <button class="btn" id="snrBtn" onclick="runSNR()">▶ 分析</button>
+  </div>
+  <div id="snrResult">
+    <div class="empty-state">輸入幣種後點「分析」，取得 SNR 關鍵位 + 微觀結構匯流判斷</div>
+  </div>
+
   <!-- OI Dashboard -->
   <div class="sec-title" id="oiSection">OI 儀表板
     <span id="oiScanTime" style="font-size:10px;color:var(--muted);font-weight:normal;letter-spacing:0;"></span>
@@ -1015,6 +1090,156 @@ function renderAlerts(data) {
       </div>
     </div>`;
   }).join("");
+}
+
+
+// ── SNR Analysis ──────────────────────────────────────────────────
+let snrTF = "4H";
+
+function setTF(tf, el) {
+  snrTF = tf;
+  document.querySelectorAll(".tf-btn").forEach(b => b.classList.remove("active"));
+  el.classList.add("active");
+  if (document.getElementById("snrInput").value.trim()) runSNR();
+}
+
+async function runSNR() {
+  const sym = document.getElementById("snrInput").value.trim().toUpperCase();
+  if (!sym) return;
+  const btn = document.getElementById("snrBtn");
+  const box = document.getElementById("snrResult");
+  btn.disabled = true; btn.textContent = "分析中...";
+  box.innerHTML = '<div class="empty-state"><div class="dots" style="display:inline-flex;gap:4px;"><span></span><span></span><span></span></div><br><br>分析 ' + sym + ' 的 SNR 結構中...</div>';
+
+  try {
+    const r = await fetch("/snr-confluence/" + sym);
+    const d = await r.json();
+    if (d.error) {
+      box.innerHTML = '<div class="empty-state">❌ ' + d.error + '</div>';
+    } else {
+      renderSNR(d);
+      document.getElementById("snrTime").textContent = "· " + new Date().toLocaleTimeString("zh-TW");
+    }
+  } catch(e) {
+    box.innerHTML = '<div class="empty-state">❌ 載入失敗：' + e.message + '</div>';
+  }
+  btn.disabled = false; btn.textContent = "▶ 分析";
+}
+
+function renderSNR(d) {
+  const box = document.getElementById("snrResult");
+  const htf = d.htf || {};
+  const dv  = d.derivatives || {};
+  const cur = d.current_price;
+
+  const scoreColor = d.verdict_class.includes("long") ? "var(--green)"
+                   : d.verdict_class.includes("short") ? "var(--red)" : "var(--yellow)";
+
+  // ── 壓力區 ──────────────────────────────────────────────────
+  const resHtml = (htf.resistances || []).map(r => {
+    const sc = r.strength >= 70 ? "var(--green)" : r.strength >= 40 ? "var(--yellow)" : "var(--muted)";
+    return `<div class="level-row res">
+      <div>
+        <span class="lv-price">$${r.price}</span>
+        <span class="lv-dist">+${r.distance_pct.toFixed(2)}%</span>
+      </div>
+      <div class="lv-tags">
+        ${r.fresh ? '<span class="lv-tag fresh">FRESH</span>' : '<span class="lv-tag tested">測試'+r.retests+'次</span>'}
+        <span class="lv-tag strong">${r.touches}觸</span>
+        <div class="lv-strength"><div class="lv-strength-fill" style="width:${r.strength}%;background:${sc}"></div></div>
+      </div>
+    </div>`;
+  }).join("") || '<div style="color:var(--muted);font-size:12px;padding:8px;">上方無明顯壓力</div>';
+
+  // ── 支撐區 ──────────────────────────────────────────────────
+  const supHtml = (htf.supports || []).map(s => {
+    const sc = s.strength >= 70 ? "var(--green)" : s.strength >= 40 ? "var(--yellow)" : "var(--muted)";
+    return `<div class="level-row sup">
+      <div>
+        <span class="lv-price">$${s.price}</span>
+        <span class="lv-dist">${s.distance_pct.toFixed(2)}%</span>
+      </div>
+      <div class="lv-tags">
+        ${s.fresh ? '<span class="lv-tag fresh">FRESH</span>' : '<span class="lv-tag tested">測試'+s.retests+'次</span>'}
+        <span class="lv-tag strong">${s.touches}觸</span>
+        <div class="lv-strength"><div class="lv-strength-fill" style="width:${s.strength}%;background:${sc}"></div></div>
+      </div>
+    </div>`;
+  }).join("") || '<div style="color:var(--muted);font-size:12px;padding:8px;">下方無明顯支撐</div>';
+
+  // ── 訊號 ────────────────────────────────────────────────────
+  const sigHtml = (d.signals || []).map(s => {
+    const dirIcon = s.dir === "long" ? "▲" : s.dir === "short" ? "▼" : "◆";
+    const dirColor = s.dir === "long" ? "var(--green)" : s.dir === "short" ? "var(--red)" : "var(--muted)";
+    return `<div class="signal-item">
+      <span class="sig-cat ${s.cat}">${s.cat}</span>
+      <span class="sig-text">${s.text}</span>
+      <span class="sig-dir" style="color:${dirColor}">${dirIcon}</span>
+    </div>`;
+  }).join("") || '<div style="color:var(--muted);font-size:12px;">無明顯訊號</div>';
+
+  // ── 交易計畫 ────────────────────────────────────────────────
+  const p = d.plan || {};
+  const planHtml = p.dir ? `
+    <div class="plan-box">
+      <div class="plan-title">交易計畫 · ${p.dir}</div>
+      <div class="plan-grid">
+        <div class="plan-cell"><div class="plan-k">進場</div><div class="plan-v">${p.entry}</div></div>
+        <div class="plan-cell"><div class="plan-k">停損</div><div class="plan-v" style="color:var(--red)">${p.stop}</div></div>
+        <div class="plan-cell"><div class="plan-k">目標</div><div class="plan-v" style="color:var(--green)">${p.target}</div></div>
+        ${p.rr ? `<div class="plan-cell"><div class="plan-k">風報比</div><div class="plan-v" style="color:var(--accent)">1 : ${p.rr}</div></div>` : ""}
+      </div>
+    </div>` : `
+    <div class="plan-box">
+      <div class="plan-title">交易計畫</div>
+      <div style="font-size:12px;color:var(--muted);">目前訊號不足，建議觀望等待更明確的位階與確認訊號。</div>
+    </div>`;
+
+  const lc = d.ltf_candle || {};
+  const candleName = {
+    pinbar_bull: "看漲 Pin Bar", pinbar_bear: "看跌 Pin Bar",
+    marubozu: "大實體 K 棒", doji: "十字星", normal: "一般 K 棒"
+  }[lc.type] || "--";
+
+  box.innerHTML = `
+  <div class="snr-result">
+    <div class="snr-verdict">
+      <div style="text-align:center;min-width:76px;">
+        <div class="snr-score" style="color:${scoreColor}">${d.score > 0 ? "+" + d.score : d.score}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:monospace;">匯流分數</div>
+      </div>
+      <div>
+        <div class="verdict-badge ${d.verdict_class}">${d.verdict}</div>
+        <div class="snr-meta">
+          <div class="snr-meta-item">現價 <span>$${cur}</span></div>
+          <div class="snr-meta-item">位階 <span>${htf.position || "--"}</span></div>
+          <div class="snr-meta-item">結構 <span>${htf.trend || "--"}</span></div>
+          <div class="snr-meta-item">LTF K棒 <span>${candleName}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="level-section">
+      <div class="level-title">上方壓力 (Resistance) · ${htf.timeframe || "4H"}</div>
+      ${resHtml}
+      <div class="level-row current" style="margin-top:8px;">
+        <div><span class="lv-price" style="color:var(--accent)">$${cur}</span>
+             <span class="lv-dist">← 現價</span></div>
+        <div style="font-family:monospace;font-size:11px;color:${(dv.pct24h||0)>=0?"var(--green)":"var(--red)"}">
+          24H ${(dv.pct24h||0)>=0?"+":""}${(dv.pct24h||0).toFixed(2)}%
+        </div>
+      </div>
+      <div class="level-title" style="margin-top:14px;">下方支撐 (Support)</div>
+      ${supHtml}
+    </div>
+
+    <div class="signal-list">
+      <div class="level-title">匯流訊號 (${(d.signals||[]).length})</div>
+      ${sigHtml}
+    </div>
+
+    ${planHtml}
+  </div>`;
 }
 
 // ── Init ──────────────────────────────────────────────────────────
