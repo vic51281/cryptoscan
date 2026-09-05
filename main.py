@@ -316,8 +316,8 @@ def build_snr_levels(candles, swings, tolerance_pct=0.6):
         retests = 0
         for c in after:
             # 價格進入這個 level 區間就算一次回測
-            if c["l"] <= lv["price"] * (1 + tolerance_pct/100) and \
-               c["h"] >= lv["price"] * (1 - tolerance_pct/100):
+            in_range = (c["l"] <= lv["price"] * (1 + tolerance_pct/100)) and (c["h"] >= lv["price"] * (1 - tolerance_pct/100))
+            if in_range:
                 retests += 1
         lv["retests"] = retests
         lv["fresh"] = retests == 0          # MSNR: 未被測試過 = fresh level
