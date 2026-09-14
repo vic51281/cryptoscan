@@ -329,6 +329,91 @@ def classify_candle(c):
     }
 
 
+def estimate_cvd(candles):
+    """近似 CVD (Cumulative Volume Delta)。
+    沒有逐筆成交方向資料時，用「收盤在K棒區間中的位置」估算買賣力道：
+    收盤越靠近高點，視為買方力道越強；越靠近低點，視為賣方力道越強。
+    這是常見的近似算法（概念類似 Chaikin Money Flow），不是真實逐筆買賣單統計，
+    僅用來判斷方向性的真偽，不做絕對數值解讀。"""
+    cvd = 0.0
+    series = []
+    for c in candles:
+        rng = c["h"] - c["l"]
+        if rng == 0:
+            delta = 0.0
+        else:
+            delta = c["vol"] * ((c["c"] - c["l"]) - (c["h"] - c["c"])) / rng
+        cvd += delta
+        series.append(cvd)
+    return series
+
+
+def check_cvd_divergence(candles, cvd_series, lookback=10):
+    """檢查最近 lookback 根K棒內，價格方向跟 CVD 方向是否背離。
+    背離 = 表面價格動作跟真實買賣力道不一致，是 SNR 假訊號最常見的成因。"""
+    n = len(candles)
+    if n < lookback + 1 or len(cvd_series) < lookback + 1:
+        return {"divergence": False, "note": "資料不足"}
+    price_now, price_then = candles[-1]["c"], candles[-lookback]["c"]
+    cvd_now, cvd_then = cvd_series[-1], cvd_series[-lookback]
+    price_dir = "up" if price_now > price_then else "down"
+    cvd_dir = "up" if cvd_now > cvd_then else "down"
+    return {
+        "price_dir": price_dir,
+        "cvd_dir": cvd_dir,
+        "divergence": price_dir != cvd_dir,
+        "cvd_last": round(cvd_now, 2),
+        "lookback_bars": lookback,
+    }
+
+
+def find_anchor_idx(swings):
+    """找最近一個顯著擺盪點的索引，作為 Anchored VWAP 的錨點。
+    用「最近一次」而非「最極端」的擺盪點，比較符合『從上一個關鍵轉折點以來的平均成本』這個用法。"""
+    if not swings:
+        return None
+    return max(swings, key=lambda s: s["idx"])["idx"]
+
+
+def anchored_vwap(candles, anchor_idx):
+    """從 anchor_idx 開始計算成交量加權平均價 (Anchored VWAP)。"""
+    if anchor_idx is None:
+        return None
+    seg = candles[anchor_idx:]
+    if not seg:
+        return None
+    total_pv = sum(((c["h"] + c["l"] + c["c"]) / 3) * c["vol"] for c in seg)
+    total_v = sum(c["vol"] for c in seg)
+    if total_v == 0:
+        return None
+    return total_pv / total_v
+
+
+def funding_extremity(sym, current_fr, periods=8):
+    """檢查資金費率是否『連續多期』處於極端區間，而非單一時間點的雜訊
+    （對應框架文件裡的「誤判四：忽略資金費率的時間維度」）。"""
+    d = okx_get(f"https://www.okx.com/api/v5/public/funding-rate-history?instId={sym}-USDT-SWAP&limit={periods}")
+    if not d or not d.get("data"):
+        return {"extreme": False, "note": "資料不足"}
+    try:
+        rates = [float(r["fundingRate"]) for r in d["data"]]
+        if not rates or current_fr is None:
+            return {"extreme": False, "note": "資料不足"}
+        avg = sum(rates) / len(rates)
+        mx, mn = max(rates), min(rates)
+        extreme_high = current_fr > 0 and avg > 0 and current_fr >= mx * 0.95
+        extreme_low = current_fr < 0 and avg < 0 and current_fr <= mn * 0.95
+        return {
+            "avg_period": round(avg, 6),
+            "periods": periods,
+            "extreme_high": extreme_high,
+            "extreme_low": extreme_low,
+            "extreme": extreme_high or extreme_low,
+        }
+    except Exception:
+        return {"extreme": False, "note": "解析失敗"}
+
+
 def build_snr_levels(candles, swings, tolerance_pct=0.6):
     """把 swing 點聚合成 SNR 區域，計算觸碰次數與 freshness"""
     if not candles:
@@ -400,6 +485,13 @@ def analyze_snr(sym, bar="4H"):
     swings  = find_swings(candles, lookback=5)
     levels  = build_snr_levels(candles, swings)
 
+    # ── 微觀結構確認層：CVD 背離 + Anchored VWAP（沿用已抓好的 candles，不額外呼叫API）──
+    cvd_series = estimate_cvd(candles)
+    cvd_info   = check_cvd_divergence(candles, cvd_series, lookback=10)
+
+    anchor_idx  = find_anchor_idx(swings)
+    vwap_anchor = anchored_vwap(candles, anchor_idx)
+
     # 分成上方壓力 / 下方支撐
     resistances = sorted(
         [l for l in levels if l["price"] > current],
@@ -462,6 +554,12 @@ def analyze_snr(sym, bar="4H"):
             "candle_type": l["candle_type"],
             "age_bars": l["age_bars"],
         } for l in supports],
+        "cvd": cvd_info,
+        "anchored_vwap": {
+            "value": round(vwap_anchor, 6) if vwap_anchor else None,
+            "anchor_idx": anchor_idx,
+            "distance_pct": round((current - vwap_anchor) / vwap_anchor * 100, 2) if vwap_anchor else None,
+        },
     }
 
 
@@ -580,6 +678,46 @@ def snr_confluence(sym):
             signals.append({"cat":"情緒","level":"medium","dir":"short",
                             "text":f"壓力區散戶做多 {lr:.0f}%，逆向指標偏空"})
 
+    # ── 6. CVD 背離／確認（判斷 SNR 位置訊號的真偽）──────────────
+    cvd_info = htf.get("cvd", {})
+    if cvd_info.get("divergence"):
+        if pos == "貼近支撐" and cvd_info.get("price_dir") == "down":
+            score += 15
+            signals.append({"cat":"CVD","level":"high","dir":"long",
+                "text":"價格創新低但 CVD 未同步破底（背離），賣壓減弱，支撐訊號可信度提高"})
+        elif pos == "貼近壓力" and cvd_info.get("price_dir") == "up":
+            score -= 15
+            signals.append({"cat":"CVD","level":"high","dir":"short",
+                "text":"價格創新高但 CVD 未同步走強（背離），恐為插針/誘多，壓力訊號可信度提高"})
+    elif cvd_info.get("price_dir"):
+        if pos == "貼近支撐" and cvd_info.get("price_dir") == "up":
+            score += 10
+            signals.append({"cat":"CVD","level":"medium","dir":"long",
+                "text":"CVD 與價格同步走強，反彈由真實買盤驅動"})
+        elif pos == "貼近壓力" and cvd_info.get("price_dir") == "down":
+            score -= 10
+            signals.append({"cat":"CVD","level":"medium","dir":"short",
+                "text":"CVD 與價格同步走弱，賣壓真實，壓力訊號可信"})
+
+    # ── 7. Anchored VWAP Confluence（獨立來源的位置驗證）──────────
+    avwap = htf.get("anchored_vwap", {})
+    if avwap.get("distance_pct") is not None and abs(avwap["distance_pct"]) < 1.5:
+        vdir = "long" if score >= 0 else "short"
+        score += 10 if score >= 0 else -10
+        signals.append({"cat":"VWAP","level":"medium","dir":vdir,
+            "text":f"現價貼近 Anchored VWAP ${avwap['value']}（距離 {avwap['distance_pct']:.2f}%），與 SNR 位置形成 confluence"})
+
+    # ── 8. 資金費率多期極端檢查（避免用單一時間點誤判擁擠倉位）──────
+    fr_ext = funding_extremity(sym, fr) if fr is not None else {}
+    if fr_ext.get("extreme_high") and pos == "貼近壓力":
+        score -= 10
+        signals.append({"cat":"微觀","level":"high","dir":"short",
+            "text":f"資金費率連續 {fr_ext.get('periods')} 期處於偏正極端（均值 {fr_ext.get('avg_period')}），多方擁擠，逆勢反轉風險升高"})
+    elif fr_ext.get("extreme_low") and pos == "貼近支撐":
+        score += 10
+        signals.append({"cat":"微觀","level":"high","dir":"long",
+            "text":f"資金費率連續 {fr_ext.get('periods')} 期處於偏負極端（均值 {fr_ext.get('avg_period')}），空方擁擠，軋空機率上升"})
+
     # ── 結論 ───────────────────────────────────────────────────
     if score >= 45:    verdict, vcolor = "強力做多", "strong_long"
     elif score >= 20:  verdict, vcolor = "偏多", "long"
@@ -620,8 +758,11 @@ def snr_confluence(sym):
         "ltf_candle": lc,
         "derivatives": {
             "oi_1h_pct": oi1h, "funding_rate": fr,
-            "long_ratio": lr, "pct24h": p24
+            "long_ratio": lr, "pct24h": p24,
+            "funding_extremity": fr_ext,
         },
+        "cvd": cvd_info,
+        "anchored_vwap": avwap,
         "signals": signals,
         "plan": plan,
     })
